@@ -1,0 +1,26 @@
+# CoverWise AI - AI/ML Module Dependencies
+# Python 3.11+ required
+
+# Core Framework & Validation (Pydantic v2)
+pydantic>=2.7.0,<3.0.0
+pydantic-settings>=2.2.0,<3.0.0
+python-dotenv>=1.0.0
+
+# Document Ingestion & Extraction
+pymupdf>=1.24.0,<2.0.0
+
+# LLM Client (Ollama Integration)
+httpx>=0.27.0,<1.0.0
+
+# Testing & Quality Assurance
+pytest>=8.0.0
+pytest-cov>=4.1.0
+
+# --- Phase 2: Retrieval & Vector Store (Deferred Implementation) ---
+# sentence-transformers>=3.0.0
+# pgvector>=0.3.0
+# psycopg[binary]>=3.1.0
+
+# --- Phase 2: Optional OCR (Deferred Implementation) ---
+# paddleocr>=2.7.0
+# pytesseract>=0.3.10
