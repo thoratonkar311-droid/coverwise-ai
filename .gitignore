@@ -44,4 +44,5 @@ uploads/
 
 # AI models
 models/
+!backend/app/models/
 *.gguf
