@@ -1,0 +1,173 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand Tokens */
+  --color-primary-blue: #0052d1;
+  --color-primary-bright: #1769ff;
+  --color-navy: #0a1d2e;
+  --color-secondary-teal: #006b5f;
+  --color-bright-teal: #71f8e4;
+  --color-blue-surface: #eef4ff;
+  --color-surface-subtle: #f8f9ff;
+  --color-error: #ba1a1a;
+
+  /* Tier Classification Tokens */
+  --tier-policy-text: #0043aa;
+  --tier-policy-bg: #eef4ff;
+  --tier-policy-border: #bfdbfe;
+
+  --tier-ai-text: #5b21b6;
+  --tier-ai-bg: #f5f3ff;
+  --tier-ai-border: #ddd6fe;
+
+  --tier-deterministic-text: #006b5f;
+  --tier-deterministic-bg: #e6f7f5;
+  --tier-deterministic-border: #a7f3d0;
+
+  --tier-estimate-text: #b45309;
+  --tier-estimate-bg: #fffbeb;
+  --tier-estimate-border: #fde68a;
+
+  /* Neutral surfaces */
+  --background: #f8f9ff;
+  --foreground: #0a1d2e;
+  --card-bg: #ffffff;
+  --border-subtle: #e2e8f0;
+}
+
+@theme inline {
+  --color-brand-primary: var(--color-primary-blue);
+  --color-brand-bright: var(--color-primary-bright);
+  --color-brand-navy: var(--color-navy);
+  --color-brand-teal: var(--color-secondary-teal);
+  --color-brand-bright-teal: var(--color-bright-teal);
+  --color-brand-blue-surface: var(--color-blue-surface);
+  --color-brand-surface-subtle: var(--color-surface-subtle);
+  --color-brand-error: var(--color-error);
+
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Numeric / Financial Monospace Utility */
+.font-numeric {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1, "lnum" 1, "zero" 1;
+}
+
+/* Subtle glassmorphism */
+.glass-header {
+  background-color: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Custom premium card elevation */
+.card-subtle-shadow {
+  box-shadow: 0 1px 3px 0 rgba(10, 29, 46, 0.04), 0 4px 12px 0 rgba(10, 29, 46, 0.03);
+}
+
+.card-hover-shadow {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover-shadow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 82, 209, 0.08), 0 8px 10px -6px rgba(0, 82, 209, 0.03);
+}
+
+/* Subtle Keyframes */
+@keyframes pulseGlow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.9;
+  }
+}
+
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes floatGentleReverse {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+@keyframes spinOrbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spinOrbitReverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: floatGentle 5s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: floatGentleReverse 6s ease-in-out infinite;
+}
+
+.animate-spin-orbit {
+  animation: spinOrbit 45s linear infinite;
+}
+
+.animate-spin-orbit-rev {
+  animation: spinOrbitReverse 60s linear infinite;
+}
+
+/* Accessibility: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
