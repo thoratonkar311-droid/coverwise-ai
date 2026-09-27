@@ -1,0 +1,82 @@
+{
+  "policy_name": "Star Comprehensive Gold Plan",
+  "policy_id": "SHI-2026-IND-7788",
+  "insurer_name": "Star Health & Allied Insurance Co.",
+  "plan_year": 2026,
+  "effective_date": "2026-04-01",
+  "currency": "INR",
+  "network_name": "Star National Cashless Hospital Network",
+  "deductibles": {
+    "individual_in_network": 25000.0,
+    "individual_out_of_network": 50000.0,
+    "family_in_network": 50000.0,
+    "family_out_of_network": 100000.0,
+    "currency": "INR",
+    "page": 1
+  },
+  "out_of_pocket_max": {
+    "individual_in_network": 200000.0,
+    "individual_out_of_network": 400000.0,
+    "family_in_network": 400000.0,
+    "family_out_of_network": 800000.0,
+    "currency": "INR",
+    "page": 1
+  },
+  "copays": {
+    "primary_care": 500.0,
+    "specialist": 1000.0,
+    "urgent_care": 1500.0,
+    "emergency_room": 2500.0,
+    "currency": "INR",
+    "page": 2
+  },
+  "coinsurance": {
+    "in_network_percentage": 10.0,
+    "out_of_network_percentage": 25.0,
+    "page": 2
+  },
+  "prior_authorizations": [
+    {
+      "service": "Cashless hospitalization / Elective admission",
+      "requirement": "at least 48 hours prior to planned elective admission",
+      "page": 3
+    },
+    {
+      "service": "Outpatient Daycare Procedures / Surgical Procedures",
+      "requirement": "prior authorization from the Third Party Administrator (TPA)",
+      "page": 3
+    }
+  ],
+  "waiting_periods": [
+    {
+      "duration_days": 30,
+      "condition": "Initial waiting period for all illnesses except accidental trauma",
+      "page": 3
+    },
+    {
+      "duration_months": 24,
+      "condition": "Specified pre-existing diseases",
+      "page": 3
+    }
+  ],
+  "exclusions": [
+    "Cosmetic surgery or procedures performed primarily to improve physical appearance.",
+    "Experimental, investigational, or unproven medical treatments.",
+    "Adult routine dental cleanings, cosmetic dentistry, and dental implants.",
+    "Routine adult eye refraction, spectacles, and contact lenses.",
+    "Adventure sports injuries sustained during professional motor racing or mountaineering."
+  ],
+  "limits": [
+    {
+      "service": "AYUSH alternative treatments",
+      "limit_value": "INR 50,000.00 per policy year",
+      "page": 4
+    },
+    {
+      "service": "Alternative therapies and physiotherapy",
+      "limit_value": "12 visits annually",
+      "page": 4
+    }
+  ],
+  "conflicts_detected": true
+}
