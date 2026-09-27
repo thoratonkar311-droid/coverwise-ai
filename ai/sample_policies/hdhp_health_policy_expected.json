@@ -1,0 +1,82 @@
+{
+  "policy_name": "BlueShield Horizon HDHP HSA-Qualified Plan",
+  "policy_id": "BSH-2026-HDHP-4451",
+  "insurer_name": "BlueShield Horizon Insurance Group",
+  "plan_year": 2026,
+  "effective_date": "2026-01-01",
+  "currency": "USD",
+  "network_name": "BlueShield Preferred Regional Network",
+  "deductibles": {
+    "individual_in_network": 3200.0,
+    "individual_out_of_network": 6400.0,
+    "family_in_network": 6400.0,
+    "family_out_of_network": 12800.0,
+    "currency": "USD",
+    "page": 1
+  },
+  "out_of_pocket_max": {
+    "individual_in_network": 7500.0,
+    "individual_out_of_network": 15000.0,
+    "family_in_network": 15000.0,
+    "family_out_of_network": 30000.0,
+    "currency": "USD",
+    "page": 1
+  },
+  "copays": {
+    "primary_care": 30.0,
+    "specialist": 60.0,
+    "urgent_care": 80.0,
+    "emergency_room": 400.0,
+    "currency": "USD",
+    "page": 2
+  },
+  "coinsurance": {
+    "in_network_percentage": 15.0,
+    "out_of_network_percentage": 35.0,
+    "page": 2
+  },
+  "prior_authorizations": [
+    {
+      "service": "Inpatient Admissions",
+      "requirement": "at least 48 hours prior to all non-emergency elective admissions",
+      "page": 3
+    },
+    {
+      "service": "Outpatient Surgical Interventions",
+      "requirement": "prior authorization from the Medical Review Board",
+      "page": 3
+    }
+  ],
+  "waiting_periods": [
+    {
+      "duration_months": 6,
+      "condition": "Major restorative dental procedures",
+      "page": 3
+    },
+    {
+      "duration_months": 12,
+      "condition": "Orthodontic treatments",
+      "page": 3
+    }
+  ],
+  "exclusions": [
+    "Cosmetic surgery or procedures performed primarily to improve physical appearance.",
+    "Laser eye refractive surgery (LASIK or PRK).",
+    "Adult routine dental examinations, cleanings, and restorative treatments.",
+    "Experimental, investigational, or unproven medical treatments.",
+    "Weight loss surgeries (bariatric procedures) without documented chronic co-morbidities."
+  ],
+  "limits": [
+    {
+      "service": "Tier 4 Specialty Drugs",
+      "limit_value": "$300.00 max per prescription",
+      "page": 2
+    },
+    {
+      "service": "Chiropractic therapy and alternative therapies",
+      "limit_value": "20 visits annually",
+      "page": 4
+    }
+  ],
+  "conflicts_detected": true
+}
