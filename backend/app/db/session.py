@@ -10,7 +10,7 @@ from app.core.logging import get_logger
 
 logger = get_logger("coverwise.db")
 
-SUPPORTED_SCHEMES = ("postgresql", "postgresql+psycopg2", "postgresql+psycopg", "sqlite")
+SUPPORTED_SCHEMES = ("postgresql", "postgresql+psycopg2", "postgresql+psycopg", "sqlite", "postgres")
 
 
 def validate_database_url(url: str) -> str:
@@ -28,8 +28,10 @@ def validate_database_url(url: str) -> str:
             f"Unsupported database scheme '{scheme}'. Supported schemes are: {', '.join(SUPPORTED_SCHEMES)}"
         )
 
-    # Normalize standard postgresql:// to postgresql+psycopg2:// for psycopg2 driver
-    if scheme == "postgresql":
+    # Normalize standard postgresql:// or legacy postgres:// to postgresql+psycopg2:// for psycopg2 driver
+    if scheme == "postgres":
+        url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif scheme == "postgresql":
         url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
     return url

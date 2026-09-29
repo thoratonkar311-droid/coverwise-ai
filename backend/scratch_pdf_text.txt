@@ -1,0 +1,773 @@
+=== PAGE 1 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 1
+COVERWISE SYNTHETIC HEALTH POLICY
+Comprehensive test policy designed to exercise policy extraction, evidence citations,
+deterministic treatment estimates, What-If scenarios, dashboard persistence, and Policy
+Assistant workflows.
+Field
+Value
+Document Type
+Synthetic individual and family health insurance policy
+Policy Number
+CWA-SYN-2026-000184
+Product Name
+CoverWise Secure Health Plus
+UIN
+CWAHLIP26001V012026
+Policy Version
+1.0
+Policy Period
+01-Jan-2026 to 31-Dec-2026
+Sum Insured
+INR 1000000 (INR 10 lakh)
+Policy Holder
+Aarav Mehta
+Primary Insured City
+Pune, Maharashtra
+IMPORTANT TEST-DOCUMENT NOTICE
+This is a fictional policy created for CoverWise application testing. All insurer names, policy numbers, member names,
+limits, prices, waiting periods, and contact details are synthetic. Do not treat this document as proof of real insurance
+coverage.
+Coverage decisions in a production system should be based on the exact uploaded policy wording, schedule,
+endorsements, and applicable law. Where this document says a benefit is not determined, the application should
+show Not Determined rather than infer a value.
+
+
+=== PAGE 2 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 2
+Document Contents
+●
+1. Policy Schedule and Insured Members
+●
+2. Coverage Summary and Benefit Limits
+●
+3. Room Category and Accommodation Rules
+●
+4. Waiting Periods and Co-Pay
+●
+5. Treatment-Specific Coverage Rules
+●
+6. Pre- and Post-Hospitalization Benefits
+●
+7. Day Care, Ambulance, Domiciliary and Other Benefits
+●
+8. Exclusions and Non-Covered Items
+●
+9. Network Hospital and Cashless Rules
+●
+10. Claims and Reimbursement Process
+●
+11. Documents Required for Claims
+●
+12. Renewal, Cancellation, Portability and Restoration
+●
+13. Definitions
+●
+14. Deterministic Cost-Estimate Inputs for CoverWise Testing
+●
+15. What-If Scenario Rules
+●
+16. Frequently Asked Questions and Policy Evidence Phrases
+●
+17. Policy Contact and Grievance Information
+Extraction test guidance: The document intentionally includes explicit numbers, percentages, durations,
+exclusions, room limits, procedure caps, claim timelines, and evidence-friendly headings so CoverWise can identify
+and cite them.
+
+
+=== PAGE 3 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 3
+1. Policy Schedule and Insured Members
+The schedule is part of this test policy and states the key identity fields that a dashboard may surface.
+Schedule Item
+Declared Value
+Policy Number
+CWA-SYN-2026-000184
+Product
+CoverWise Secure Health Plus
+UIN
+CWAHLIP26001V012026
+Policy Type
+Individual and family floater health insurance
+Issue Date
+25-Dec-2025
+Policy Start
+01-Jan-2026
+Policy End
+31-Dec-2026
+Sum Insured
+INR 1000000
+Cumulative Bonus
+10% of sum insured per claim-free year, maximum 50%
+Base Room Eligibility
+Single private room
+ICU Eligibility
+Actuals up to eligible policy limits
+Co-Pay
+10% for non-network hospitalization; 0% for network hospitalization
+Insured Members
+Member
+Relationship
+Age
+Gender
+Sum Insured Access
+Aarav Mehta
+Self
+36
+Male
+Shared family floater
+Nisha Mehta
+Spouse
+34
+Female
+Shared family floater
+Kabir Mehta
+Child
+8
+Male
+Shared family floater
+
+
+=== PAGE 4 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 4
+2. Coverage Summary and Benefit Limits
+All percentages below are percentages of the admissible amount unless a separate monetary cap is stated.
+Benefit
+Coverage / Limit
+Conditions
+In-patient hospitalization
+100% of admissible expenses
+Subject to policy exclusions, room rule,
+sub-limits, deductible, and co-pay
+Room, boarding and nursing
+Eligible room up to single private
+room
+Higher category may trigger proportionate
+deductions; see Section 3
+ICU
+100% up to INR 20000/day
+Higher actual ICU cost is limited to this cap
+Medical practitioner fees
+100% of admissible amount
+Within overall sum insured
+Surgeon / anesthetist / specialist
+100% of admissible amount
+Subject to procedure-specific limits
+Diagnostics during hospitalization
+100%
+Medically necessary and related to covered
+admission
+Medicines during hospitalization
+100%
+Medically necessary
+Pre-hospitalization
+Up to 30 days
+Expenses medically related to covered
+hospitalization
+Post-hospitalization
+Up to 60 days
+Expenses medically related to covered
+hospitalization
+Day care procedures
+100%
+List of covered day care procedures applies
+Ambulance
+Up to INR 5000 per hospitalization
+Emergency ground ambulance
+Domiciliary hospitalization
+Up to INR 100000/year
+Medical necessity and policy conditions apply
+Home nursing after discharge
+Up to INR 1500/day for 10 days
+Doctor prescribed and related to covered
+hospitalization
+Maternity
+Not covered
+Explicit exclusion in this policy
+Sub-Limits
+Service
+Maximum
+Notes
+Cataract surgery
+INR 25000 per eye per policy year
+Includes lens and surgery
+Hernia repair
+INR 75000 per admission
+Day care or in-patient
+Joint replacement surgery
+Up to 60% of sum insured
+Waiting period applies
+Specific listed procedure
+Up to 50% of sum insured
+See procedure table in Section 5
+Ambulance
+INR 5000 per hospitalization
+Emergency ground ambulance
+
+
+=== PAGE 5 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 5
+3. Room Category and Accommodation Rules
+Room selection is a material policy variable for CoverWise deterministic and What-If calculations.
+Room Category
+Eligible Limit
+If Selected
+General ward
+No daily monetary cap
+Fully eligible when medically necessary
+Twin-sharing room
+Up to INR 5000/day
+Eligible up to daily cap
+Single private room
+Up to INR 8000/day
+Base eligible category
+Suite / deluxe room
+Not eligible
+Proportionate deduction may apply to linked
+room-related charges
+ICU
+Up to INR 20000/day
+Separate ICU cap
+Proportionate Deduction Rule
+When a member voluntarily selects a room category above the eligible category, room charges are not payable
+above the eligible limit. For surgeon, nursing, procedure, and other charges that are contractually linked to
+room category, the admissible amount may be reduced in the same proportion as the eligible room cost bears
+to the actual room cost. The application should cite this section when explaining a room-category What-If
+scenario.
+Example for application testing only: If the eligible single private room is INR 8000/day and the selected room is INR
+12000/day, the room cost is not fully admissible and linked proportionate deductions may reduce the insurer share. This
+example is illustrative and not an additional contractual limit.
+
+
+=== PAGE 6 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 6
+4. Waiting Periods and Co-Pay
+Condition
+Waiting Period
+Rule
+Initial waiting period
+30 days
+No benefit for sickness-related hospitalization during first 30 days
+from policy start, except accident
+Specific diseases
+24 months
+Applies to listed conditions including hernia, piles, cataract, benign
+prostatic hypertrophy, specified joint procedures, and sinus surgery
+Pre-existing diseases (PED)
+48 months
+Applies to diseases or conditions existing before policy start as
+defined in policy
+Joint replacement due
+degenerative condition
+36 months
+Specific waiting period in addition to general rules
+Continuous renewal
+Waiting period
+served
+Served waiting periods continue credit subject to renewal continuity
+Co-Pay
+Situation
+Co-Pay
+Network hospitalization
+0%
+Non-network hospitalization
+10%
+Member below age 61 using network provider
+0%
+Member voluntarily chooses non-network hospital
+10%
+The co-pay applies after admissibility and policy sub-limits are applied. It does not expand the sum insured or
+override an exclusion.
+
+
+=== PAGE 7 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 7
+5. Treatment-Specific Coverage Rules
+These explicit treatment rows are included so CoverWise can answer treatment coverage questions and
+connect policy rules to deterministic estimates.
+Treatment / Procedure
+Policy Coverage
+Limit
+Waiting / Conditions
+Total Knee Replacement
+Covered
+Up to 60% of sum insured
+(max INR 600000)
+36-month waiting if degenerative;
+accident-related cases follow
+accident rule
+CABG / Coronary Bypass
+Covered
+100% admissible within sum
+insured
+Initial, PED, and standard policy
+conditions apply
+Appendectomy
+Covered
+100% admissible within sum
+insured
+Day care or hospitalization
+Cataract Surgery
+Covered
+INR 25000 per eye
+24-month specific disease waiting
+period
+Hernia Repair
+Covered
+INR 75000 per admission
+24-month specific disease waiting
+period
+Chemotherapy
+Covered when medically
+necessary
+Up to overall sum insured
+Pre-authorization recommended for
+cashless
+Dialysis
+Covered
+Up to overall sum insured
+Hospital/authorized day care setting
+Maternity
+Not Covered
+None
+Explicit exclusion
+Cosmetic surgery
+Not Covered
+None
+Unless medically necessary due to
+accident or covered disease with
+insurer approval
+Dental treatment
+Generally not covered
+Emergency dental due to
+accidental injury only
+Accident-related hospitalization
+exception
+Policy-defined procedure cap
+For a listed specific procedure subject to a 50% of sum insured cap, the maximum policy benefit is INR 500000
+on a INR 1000000 sum insured before applicable co-pay, deductible, non-admissible items, and other
+contractual adjustments.
+
+
+=== PAGE 8 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 8
+6. Pre- and Post-Hospitalization Benefits
+Period / Benefit
+Coverage
+Required Link
+Pre-hospitalization
+30 days immediately before admission
+Diagnosis and expense must relate to
+covered hospitalization
+Post-hospitalization
+60 days immediately after discharge
+Follow-up expense must relate to covered
+hospitalization
+Follow-up diagnostics
+Covered within pre/post windows
+Doctor advised and connected to admission
+Home nursing
+Up to INR 1500/day for maximum 10 days
+Doctor prescribed after covered discharge
+Non-covered pre/post expenses include unrelated routine wellness expenses, non-prescribed supplements, and
+costs that would be excluded if incurred during the hospitalization itself.
+
+
+=== PAGE 9 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 9
+7. Day Care, Ambulance, Domiciliary and Other Benefits
+Benefit
+Limit
+Conditions
+Day care procedures
+100% admissible
+Procedure must be on approved day care list and
+medically necessary
+Emergency ambulance
+INR 5000/hospitalization
+Ground ambulance to nearest appropriate hospital
+Domiciliary hospitalization
+INR 100000/year
+Patient cannot be moved or hospital bed unavailable;
+doctor certification required
+Organ donor medical expenses
+Up to INR 50000
+Only medically necessary donor hospitalization tied to
+covered transplant
+Road ambulance for inter-facility
+transfer
+Included within ambulance cap
+Doctor advised and emergency transfer
+Mental health inpatient treatment
+Covered within sum insured
+Subject to medical necessity and policy exclusions
+AYUSH inpatient treatment
+Up to 50% of sum insured
+Approved AYUSH hospital required
+Restoration Benefit
+Once in a policy year, if the base sum insured is exhausted due to paid claims, 100% of the original sum
+insured is restored for subsequent unrelated hospitalization. Restoration cannot be used for the same illness
+that exhausted the original sum insured during the same continuous hospitalization.
+
+
+=== PAGE 10 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 10
+8. Exclusions and Non-Covered Items
+Exclusion Category
+Examples / Rule
+Maternity and childbirth
+Pregnancy, childbirth, miscarriage except where mandated by applicable law or
+covered accident complications
+Self-harm or suicide attempt
+Treatment arising directly from deliberate self-harm
+Unproven treatment
+Experimental, investigational, or unproven treatment not recognized under policy
+terms
+Cosmetic treatment
+Cosmetic or aesthetic treatment unless medically necessary after covered accidental
+injury
+Weight-loss surgery
+Excluded unless all medical necessity criteria and insurer approval are met
+Infertility treatment
+Infertility, assisted reproduction, IVF, and related procedures
+Routine wellness
+Health check-ups, vitamins, supplements, and preventive screening without medical
+indication
+Non-medical consumables
+Gloves, tissues, toiletries, service charges, and other items identified as non-medical
+in claim review
+War / nuclear perils
+Treatment directly caused by war, nuclear contamination, or specified hostile acts
+where legally permitted
+Substance misuse
+Treatment directly attributable to non-prescribed intoxicant or substance misuse,
+subject to law
+Dental care
+Routine dental treatment not caused by accidental injury requiring hospitalization
+The exclusions in this table are policy wording for this synthetic document. CoverWise should cite the relevant
+page and section rather than infer an exclusion from a broad category name alone.
+
+
+=== PAGE 11 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 11
+9. Network Hospital and Cashless Rules
+Rule
+Policy Wording
+Network hospital
+A hospital recognized under the insurer's current network list at the time of admission
+Cashless
+Available for planned or emergency hospitalization subject to pre-authorization and
+network status
+Planned hospitalization
+Cashless request should ordinarily be submitted at least 48 hours before admission
+Emergency hospitalization
+Cashless request should be submitted within 24 hours of admission where reasonably
+possible
+Non-network hospital
+Reimbursement may be available subject to 10% co-pay and policy conditions
+Pre-authorization
+Approval does not guarantee final claim payment; final liability is determined after
+discharge review
+Network list is dynamic. This document does not embed a hospital list. CoverWise should not invent a provider network
+from policy text.
+
+
+=== PAGE 12 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 12
+10. Claims and Reimbursement Process
+Stage
+Requirement / Timeline
+Emergency intimation
+Notify insurer or administrator as soon as reasonably possible and preferably within 24
+hours
+Planned admission
+Notify at least 48 hours before admission where feasible
+Cashless request
+Hospital submits pre-authorization and supporting medical records
+Discharge
+Final discharge summary and original bills/records are reviewed
+Reimbursement claim
+Submit complete claim documents within 30 days of discharge unless delay is justified
+Claim decision
+Insurer targets a decision within 15 days after receiving complete documents
+Additional information
+Insurer may request medical clarification or original records where required
+Claim settlement is based on admissibility, exclusions, waiting periods, sub-limits, co-pay, and the exact policy
+schedule. No estimate in CoverWise should be represented as a guaranteed final claim settlement.
+
+
+=== PAGE 13 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 13
+11. Documents Required for Claims
+●
+Claim form signed by insured member.
+●
+Hospital discharge summary and final bill.
+●
+Itemized hospital bills and payment receipts.
+●
+Diagnostic reports and doctor prescriptions related to the claim.
+●
+Pharmacy invoices and prescriptions where applicable.
+●
+Identity and bank details for reimbursement where required.
+●
+Pre-authorization or cashless approval documents if applicable.
+●
+Any additional document reasonably requested for claim verification.
+
+
+=== PAGE 14 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 14
+12. Renewal, Cancellation, Portability and Restoration
+Topic
+Rule
+Renewal
+Annual renewal is available subject to product terms and applicable regulation
+Grace period
+30 days for renewal payment, subject to applicable rules; claims during grace depend on
+policy/regulation
+Portability
+Member may request portability subject to regulatory timelines and insurer acceptance
+rules
+Free-look
+30 days from receipt of policy document for eligible new policies, subject to applicable
+regulation
+Cancellation by insured
+Allowed subject to written request and pro-rata/refund rules in the schedule
+Restoration
+Once per year after complete exhaustion of sum insured; conditions in Section 7
+
+
+=== PAGE 15 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 15
+13. Definitions
+Term
+Meaning
+Admissible amount
+Expense that remains payable after applying policy exclusions, limits, sub-limits, and
+other adjustments
+Hospitalization
+Admission to a hospital for at least 24 consecutive hours except listed day care
+procedures
+Day care procedure
+Medical or surgical treatment completed within a day because of technological
+advancement and not requiring 24-hour admission
+Pre-existing disease
+A condition diagnosed or treated before policy start as defined by this policy and
+applicable rules
+Network hospital
+Hospital included in the insurer's network list at the relevant time
+Non-network hospital
+Hospital not included in the insurer network list at the relevant time
+Medically necessary
+Treatment required to diagnose or treat an illness or injury and not primarily for
+convenience
+Reasonable and customary
+Charge consistent with prevailing charges for comparable treatment and service in the
+same geographic area
+Co-pay
+Percentage of an admissible claim that the insured member must pay after other policy
+adjustments
+Sum insured
+Maximum policy benefit available for covered claims during the policy period, subject to
+restoration and policy terms
+
+
+=== PAGE 16 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 16
+14. Deterministic Cost-Estimate Inputs for CoverWise Testing
+This section intentionally supplies policy-specific parameters that can be combined with a separate treatment
+benchmark price in the CoverWise Treatment Cost module. The policy itself does not guarantee that a hospital will
+charge the benchmark amount.
+Parameter
+Value
+Policy Sum Insured
+INR 1000000
+Eligible base room
+Single private room up to INR 8000/day
+ICU cap
+INR 20000/day
+Network co-pay
+0%
+Non-network co-pay
+10%
+Specific procedure cap
+50% of SI = INR 500000
+Total Knee Replacement cap
+60% of SI = INR 600000
+Cataract cap
+INR 25000/eye
+Hernia cap
+INR 75000/admission
+Ambulance cap
+INR 5000/hospitalization
+Pre-hospitalization window
+30 days
+Post-hospitalization window
+60 days
+PED waiting
+48 months
+Specific disease waiting
+24 months
+Degenerative joint replacement waiting
+36 months
+Deterministic estimate example input
+Suppose a supported Total Knee Replacement benchmark quote is INR 250000, the member is eligible for the
+procedure, and the hospital is in-network. The policy-level maximum is INR 600000, so the policy cap itself
+does not reduce a INR 250000 admissible base. The final application calculation must still apply actual policy
+rules, admissible/non-admissible items, room effects, and other data available to the estimator. Arithmetic
+should be performed by deterministic code, not by a language model.
+
+
+=== PAGE 17 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 17
+15. What-If Scenario Rules
+Scenario Variable
+Baseline
+Changed Scenario
+Quoted treatment cost
+INR 200000
+INR 250000
+Room category
+Single private room
+Suite / deluxe room
+Network status
+Network
+Non-network
+Expected co-pay
+0%
+10%
+Procedure
+Total Knee Replacement
+Total Knee Replacement
+What-If Calculation Principle
+●
+Preserve the same uploaded policy and policy_id across baseline and changed scenarios.
+●
+Change only the requested variable unless the user explicitly changes multiple variables.
+●
+Recalculate insurer and patient share deterministically from the same policy rules.
+●
+Explain material changes using the policy evidence that caused the delta, such as the non-network co-pay or
+room-category rule.
+●
+Never substitute a demo policy for the active uploaded policy.
+
+
+=== PAGE 18 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 18
+16. Frequently Asked Questions and Policy Evidence Phrases
+User Question
+Grounded Answer in this policy
+What is the initial waiting period?
+30 days from policy start for sickness-related hospitalization, except
+accidents.
+What is the pre-existing disease waiting period?
+48 months, subject to the policy definition of pre-existing disease.
+Is Total Knee Replacement covered?
+Yes, subject to a maximum of 60% of sum insured and a 36-month
+waiting period for degenerative conditions.
+What is the room rent limit?
+Single private room up to INR 8000/day; ICU up to INR 20000/day.
+What happens at a non-network hospital?
+Reimbursement may be available subject to a 10% co-pay and other
+policy conditions.
+Is cataract covered?
+Yes, up to INR 25000 per eye per policy year, after the applicable
+waiting period.
+How long are post-hospitalization expenses
+covered?
+Up to 60 days after discharge when directly related to a covered
+hospitalization.
+Is maternity covered?
+No. Maternity and childbirth are explicitly excluded in this synthetic
+policy.
+How much ambulance cover is available?
+Up to INR 5000 per hospitalization for emergency ground ambulance.
+Evidence-friendly headings
+Policy Schedule; Coverage Summary and Benefit Limits; Room Category and Accommodation Rules; Waiting
+Periods and Co-Pay; Treatment-Specific Coverage Rules; Exclusions and Non-Covered Items; Network Hospital
+and Cashless Rules; Claims and Reimbursement Process; Definitions; Deterministic Cost-Estimate Inputs;
+What-If Scenario Rules.
+
+
+=== PAGE 19 ===
+CoverWise Synthetic Health Policy - Test Document
+Synthetic policy for software testing. Not an insurance contract or financial advice.
+Page 19
+17. Policy Contact and Grievance Information
+Contact Type
+Synthetic Contact Detail
+Insurer
+CoverWise Health Assurance Ltd. (fictional)
+Claims Support
++91 1800 000 2026
+Email
+claims@example-coverwise.test
+Grievance Email
+grievance@example-coverwise.test
+Claims Address
+Claims Department, 10 Policy Plaza, Mumbai, Maharashtra 400001
+Service Hours
+09:00 to 18:00 IST, Monday to Saturday
+Final Test Checklist for CoverWise
+●
+Policy identity fields are extractable: policy number, UIN, product, dates, sum insured.
+●
+Coverage rules are extractable: room, ICU, pre/post hospitalization, ambulance, day care, domiciliary, mental
+health, AYUSH.
+●
+Waiting periods are explicit and distinct: 30 days, 24 months, 36 months, 48 months.
+●
+Co-pay is explicit and different for network vs non-network.
+●
+Treatment rules include realistic caps for Total Knee Replacement, cataract, hernia, CABG, appendectomy,
+and chemotherapy.
+●
+Exclusions are explicit and searchable.
+●
+Claims timelines and required documents are explicit.
+●
+What-If variables have concrete baseline and changed values.
+●
+The app should cite the uploaded document and page/section evidence rather than generate uncited claims.
+●
+Where information is truly absent, the app should display Not Determined rather than infer a value.
+END OF SYNTHETIC POLICY

@@ -16,6 +16,7 @@ class PolicyAnalysis(Base):
         nullable=False,
         index=True,
     )
+    user_id = Column(String(100), nullable=True, index=True)
     treatment_id = Column(
         Integer,
         ForeignKey("treatments.id", ondelete="SET NULL"),

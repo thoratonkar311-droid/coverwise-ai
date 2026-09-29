@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, Integer, JSON, String, Text, func
+from sqlalchemy import Column, DateTime, Float, Integer, JSON, String, Text, func
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -17,6 +17,11 @@ class Policy(Base):
     insurer_name = Column(String(255), nullable=True, index=True)
     plan_name = Column(String(255), nullable=True)
     policy_holder_name = Column(String(255), nullable=True)
+    sum_insured = Column(Float, nullable=True)
+    policy_start_date = Column(String(50), nullable=True)
+    policy_end_date = Column(String(50), nullable=True)
+    document_hash = Column(String(100), nullable=True, index=True)
+    extraction_confidence = Column(Float, nullable=True)
     status = Column(String(50), nullable=False, default="uploaded", index=True)
     raw_metadata = Column(JSON, nullable=True)
     error_message = Column(Text, nullable=True)
@@ -54,6 +59,18 @@ class Policy(Base):
         "EvidenceReference",
         back_populates="policy",
         cascade="all, delete-orphan",
+    )
+    conversations = relationship(
+        "PolicyConversation",
+        back_populates="policy",
+        cascade="all, delete-orphan",
+        order_by="PolicyConversation.created_at.desc()",
+    )
+    treatment_scenarios = relationship(
+        "TreatmentScenario",
+        back_populates="policy",
+        cascade="all, delete-orphan",
+        order_by="TreatmentScenario.created_at.desc()",
     )
 
     def __repr__(self) -> str:

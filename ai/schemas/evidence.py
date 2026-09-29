@@ -45,6 +45,10 @@ class EvidenceSpan(BaseModel):
         le=1.0,
         description="Extraction confidence score if available.",
     )
+    source_type: str = Field(
+        default="contractual_rule",
+        description="Source classification: contractual_rule, example, estimate, explanation, exclusion, definition",
+    )
 
 
 class ExtractedPage(BaseModel):
@@ -108,3 +112,4 @@ class Citation(BaseModel):
     clause_title: str | None = Field(default=None, description="Title of the cited clause.")
     clause_reference: str | None = Field(default=None, description="Clause/section number.")
     verbatim_text: str = Field(..., description="Verbatim policy text cited as evidence.")
+    source_type: str = Field(default="contractual_rule", description="Source classification: contractual_rule, example, estimate, explanation, exclusion, definition")

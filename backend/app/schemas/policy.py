@@ -13,6 +13,11 @@ class PolicyBase(BaseModel):
     insurer_name: Optional[str] = Field(None, max_length=255, description="Insurance provider/company name")
     plan_name: Optional[str] = Field(None, max_length=255, description="Policy plan or product name")
     policy_holder_name: Optional[str] = Field(None, max_length=255, description="Insured person/holder name")
+    sum_insured: Optional[float] = Field(None, description="Extracted total sum insured")
+    policy_start_date: Optional[str] = Field(None, max_length=50, description="Policy effective start date")
+    policy_end_date: Optional[str] = Field(None, max_length=50, description="Policy expiry end date")
+    document_hash: Optional[str] = Field(None, max_length=100, description="SHA-256 document content hash")
+    extraction_confidence: Optional[float] = Field(None, description="Overall confidence of document extraction")
     status: str = Field(default="uploaded", max_length=50, description="Processing status")
 
 
@@ -31,6 +36,11 @@ class PolicyUpdate(BaseModel):
     insurer_name: Optional[str] = None
     plan_name: Optional[str] = None
     policy_holder_name: Optional[str] = None
+    sum_insured: Optional[float] = None
+    policy_start_date: Optional[str] = None
+    policy_end_date: Optional[str] = None
+    document_hash: Optional[str] = None
+    extraction_confidence: Optional[float] = None
     status: Optional[str] = None
     error_message: Optional[str] = None
     raw_metadata: Optional[Any] = None
@@ -46,7 +56,13 @@ class PolicySummaryResponse(BaseModel):
     policy_number: Optional[str] = None
     insurer_name: Optional[str] = None
     plan_name: Optional[str] = None
+    sum_insured: Optional[float] = None
+    policy_start_date: Optional[str] = None
+    policy_end_date: Optional[str] = None
+    document_hash: Optional[str] = None
+    extraction_confidence: Optional[float] = None
     status: str
+    is_active: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -61,6 +77,7 @@ class PolicyResponse(PolicyBase):
     file_path: Optional[str] = None
     raw_metadata: Optional[Any] = None
     error_message: Optional[str] = None
+    is_active: bool = False
     created_at: datetime
     updated_at: datetime
     coverage_rules: List[CoverageRuleResponse] = []
@@ -72,7 +89,21 @@ class PolicyUploadResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int = Field(..., description="Unique ID of created policy record")
+    policy_id: Optional[int] = Field(None, description="Alias for id")
     filename: str = Field(..., description="Uploaded file name")
     status: str = Field(..., description="Processing status, e.g. uploaded, processing")
     message: str = Field(default="Policy document uploaded successfully.", description="Status message")
+    insurer_name: Optional[str] = None
+    plan_name: Optional[str] = None
+    policy_number: Optional[str] = None
+    policy_holder_name: Optional[str] = None
+    policy_start_date: Optional[str] = None
+    policy_end_date: Optional[str] = None
+    document_hash: Optional[str] = None
+    extraction_confidence: Optional[float] = None
+    sum_insured: Optional[float] = None
+    deductible: Optional[float] = None
+    copay_percent: Optional[float] = None
+    room_rent_limit: Optional[str] = None
+    is_active: bool = True
 

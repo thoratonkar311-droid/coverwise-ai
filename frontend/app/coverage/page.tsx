@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/Card";
@@ -15,8 +15,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EvidenceDrawer } from "@/components/coverage/EvidenceDrawer";
 import { api, parseApiError } from "@/lib/api";
-import { DEMO_POLICY, DEMO_COVERAGE_SCENARIOS } from "@/lib/mock-data";
 import {
+  Policy,
   CoverageStatus,
   EvidenceReference,
   AnalysisResult,
@@ -37,53 +37,123 @@ import {
   Bed,
   Clock,
   SlidersHorizontal,
+  Info,
 } from "lucide-react";
 
 type ScreenState = "success" | "loading" | "empty" | "error" | "not_determined";
 
-const TREATMENTS_LIST = [
-  { key: "knee", label: "Total Knee Replacement", sub: "Orthopedic Surgery", tag: "Partially Covered" },
-  { key: "cataract", label: "Cataract Surgery", sub: "Daycare Ophthalmology", tag: "Likely Covered" },
-  { key: "mri", label: "MRI Brain Scan", sub: "Advanced Diagnostics", tag: "Likely Covered" },
-  { key: "bariatric", label: "Bariatric Bypass", sub: "Weight Reduction", tag: "Not Covered" },
-];
-
-export default function CoveragePage() {
+function CoverageContent() {
   const router = useRouter();
-  const [screenState, setScreenState] = useState<ScreenState>("success");
-  const [selectedKey, setSelectedKey] = useState<string>("knee");
-  const [policy, setPolicy] = useState<PolicySummary | null>(DEMO_POLICY);
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(DEMO_COVERAGE_SCENARIOS.knee);
+  const searchParams = useSearchParams();
+  const policyIdParam = searchParams.get("policyId");
+
+  const [screenState, setScreenState] = useState<ScreenState>("loading");
+  const [selectedTreatmentName, setSelectedTreatmentName] = useState<string>("Total Knee Replacement");
+  const [customTreatmentInput, setCustomTreatmentInput] = useState<string>("");
+  const [policy, setPolicy] = useState<Policy | PolicySummary | null>(null);
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [apiError, setApiError] = useState<ApiError | null>(null);
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
   const [activeEvidence, setActiveEvidence] = useState<EvidenceReference | null>(null);
 
-  // Fetch policy and analysis from API client
-  const loadCoverageData = useCallback(async (treatmentKey: string) => {
-    setScreenState("loading");
-    setApiError(null);
-
-    try {
-      const [fetchedPolicy, fetchedAnalysis] = await Promise.all([
-        api.getPolicyById("pol-care-premier-01"),
-        api.createAnalysis({
-          policyId: "pol-care-premier-01",
-          treatmentName: TREATMENTS_LIST.find((t) => t.key === treatmentKey)?.label || "Total Knee Replacement",
-        }),
-      ]);
-
-      setPolicy(fetchedPolicy);
-      setAnalysis(fetchedAnalysis);
-      setScreenState("success");
-    } catch (err) {
-      setApiError(parseApiError(err));
-      setScreenState("error");
+  const getTargetPolicyId = useCallback((): string | null => {
+    if (policyIdParam) return policyIdParam;
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("coverwise_active_policy_id");
+      if (stored) return stored;
     }
+    return null;
+  }, [policyIdParam]);
+
+  const loadCoverageData = useCallback((treatment: string) => {
+    setSelectedTreatmentName(treatment);
+    setScreenState("loading");
   }, []);
 
-  const handleSelectTreatment = (key: string) => {
-    setSelectedKey(key);
-    loadCoverageData(key);
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadData() {
+      let targetPolicyId = getTargetPolicyId();
+      if (!targetPolicyId) {
+        try {
+          const overview = await api.getDashboardOverview();
+          if (overview.activePolicy) {
+            targetPolicyId = String(overview.activePolicy.id);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("coverwise_active_policy_id", targetPolicyId);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!targetPolicyId) {
+        if (!ignore) {
+          setScreenState("empty");
+        }
+        return;
+      }
+
+      try {
+        const [fetchedPolicy, fetchedAnalysis] = await Promise.all([
+          api.getPolicyById(targetPolicyId),
+          api.createAnalysis({
+            policyId: targetPolicyId,
+            treatmentName: selectedTreatmentName,
+          }),
+        ]);
+
+        if (!ignore) {
+          setPolicy(fetchedPolicy);
+          setAnalysis(fetchedAnalysis);
+          setApiError(null);
+          setScreenState("success");
+        }
+      } catch (err) {
+        if (!ignore) {
+          setApiError(parseApiError(err));
+          setScreenState("error");
+        }
+      }
+    }
+
+    loadData();
+
+    return () => {
+      ignore = true;
+    };
+  }, [getTargetPolicyId, selectedTreatmentName]);
+
+  const treatmentOptions = React.useMemo(() => {
+    const list: { key: string; label: string; sub: string; tag: string }[] = [];
+    if (policy && "rules" in policy && Array.isArray((policy as Policy).rules)) {
+      for (const r of (policy as Policy).rules) {
+        const name = r.ruleName || r.category;
+        if (name && !list.some((it) => it.label.toLowerCase() === name.toLowerCase())) {
+          list.push({
+            key: String(r.id || name),
+            label: name,
+            sub: r.category || "Extracted Policy Rule",
+            tag: r.admissibilityStatus || "Covered",
+          });
+        }
+      }
+    }
+    if (list.length === 0) {
+      list.push(
+        { key: "tkr", label: "Total Knee Replacement", sub: "Orthopedic Surgery", tag: "Policy Rule" },
+        { key: "cataract", label: "Cataract Surgery", sub: "Daycare Ophthalmology", tag: "Policy Rule" },
+        { key: "angio", label: "Coronary Angioplasty", sub: "Cardiology", tag: "Policy Rule" },
+        { key: "hernia", label: "Hernia Repair", sub: "General Surgery", tag: "Policy Rule" }
+      );
+    }
+    return list;
+  }, [policy]);
+
+  const handleSelectTreatment = (treatment: string) => {
+    loadCoverageData(treatment);
   };
 
   const handleOpenEvidence = (ev?: EvidenceReference) => {
@@ -185,7 +255,7 @@ export default function CoveragePage() {
                   key={st}
                   onClick={() => {
                     if (st === "success") {
-                      loadCoverageData(selectedKey);
+                      loadCoverageData(selectedTreatmentName);
                     } else if (st === "error") {
                       setApiError({
                         statusCode: 500,
@@ -247,7 +317,7 @@ export default function CoveragePage() {
                       : JSON.stringify(apiError.details)
                     : `Status Code: ${apiError?.statusCode || 500} • Request: ${apiError?.code || "CW_COV_EVAL_FAIL"}`
                 }
-                onRetry={() => loadCoverageData(selectedKey)}
+                onRetry={() => loadCoverageData(selectedTreatmentName)}
                 retryLabel="Retry Analysis"
               />
               <div className="mt-6 pt-6 border-t border-slate-100 flex justify-center gap-3">
@@ -256,8 +326,8 @@ export default function CoveragePage() {
                     Upload New Policy
                   </Button>
                 </Link>
-                <Button variant="primary" size="sm" onClick={() => loadCoverageData("knee")}>
-                  Load Demo Knee Replacement
+                <Button variant="primary" size="sm" onClick={() => loadCoverageData("Total Knee Replacement")}>
+                  Analyze Knee Replacement
                 </Button>
               </div>
             </Card>
@@ -268,7 +338,7 @@ export default function CoveragePage() {
             <Card className="border-slate-200 bg-white p-12 text-center">
               <EmptyState
                 title="No Policy Analysis Found"
-                description="Upload an active policy schedule or select a demo policy to evaluate coverage and patient responsibility."
+                description="Upload an active policy schedule to evaluate coverage and patient responsibility."
                 actionLabel="Upload Policy Document"
                 onAction={() => router.push("/analyze")}
               />
@@ -326,22 +396,44 @@ export default function CoveragePage() {
 
               {/* Treatment Selection Bar */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Select Treatment to Evaluate:
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    Evaluating against policy rules
-                  </span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
+                      Select or Search Procedure:
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      Evaluated directly against active policy contractual rules
+                    </span>
+                  </div>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (customTreatmentInput.trim()) {
+                        handleSelectTreatment(customTreatmentInput.trim());
+                      }
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <input
+                      type="text"
+                      placeholder="Search any procedure..."
+                      value={customTreatmentInput}
+                      onChange={(e) => setCustomTreatmentInput(e.target.value)}
+                      className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-[#0052D1] w-48 sm:w-64"
+                    />
+                    <Button variant="primary" size="sm" type="submit">
+                      Analyze
+                    </Button>
+                  </form>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {TREATMENTS_LIST.map((item) => {
-                    const isSelected = selectedKey === item.key && screenState !== "not_determined";
+                  {treatmentOptions.map((item) => {
+                    const isSelected = selectedTreatmentName.toLowerCase() === item.label.toLowerCase() && screenState !== "not_determined";
                     return (
                       <button
                         key={item.key}
-                        onClick={() => handleSelectTreatment(item.key)}
+                        onClick={() => handleSelectTreatment(item.label)}
                         className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 ${
                           isSelected
                             ? "bg-[#0052D1] text-white border-[#0052D1] shadow-md shadow-blue-600/15"
@@ -358,11 +450,13 @@ export default function CoveragePage() {
                           className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md w-fit ${
                             isSelected
                               ? "bg-white/20 text-white"
-                              : item.tag === "Not Covered"
+                              : item.tag === "Not Covered" || item.tag === "Excluded"
                               ? "bg-red-50 text-red-700 border border-red-200"
-                              : item.tag === "Likely Covered"
+                              : item.tag === "Likely Covered" || item.tag === "Covered"
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : "bg-blue-50 text-blue-700 border border-blue-200"
+                              : item.tag === "Partially Covered" || item.tag === "Partial"
+                              ? "bg-blue-50 text-blue-700 border border-blue-200"
+                              : "bg-slate-100 text-slate-700 border border-slate-200"
                           }`}
                         >
                           {item.tag}
@@ -436,8 +530,12 @@ export default function CoveragePage() {
                   label="Estimated Patient Share"
                   value={formatCurrency(currentAnalysis.estimatedPatientShare)}
                   sourceTier="estimated_result"
-                  sourceLabel="Patient Estimate"
-                  subtext="Deductible + Copay + Consumables"
+                  sourceLabel={currentAnalysis.deductibleStatus === "not_determined" ? "Conditional Estimate" : "Patient Estimate"}
+                  subtext={
+                    currentAnalysis.deductibleStatus === "not_determined"
+                      ? "Conditional on ₹0 deductible"
+                      : "Deductible + Copay + Consumables"
+                  }
                   highlight
                   icon={<Coins className="w-5 h-5 text-[#0052D1]" />}
                 />
@@ -456,11 +554,26 @@ export default function CoveragePage() {
                     </CardHeader>
 
                     <CardContent className="space-y-4">
+                      {currentAnalysis.deductibleStatus === "not_determined" && (
+                        <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
+                          <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                          <span>
+                            <strong>Policy Deductible: Not Determined.</strong> The policy terms do not establish an individual deductible. Financial calculations are conditional on ₹0 deductible being applied upon claim adjudication.
+                          </span>
+                        </div>
+                      )}
+
                       <div className="divide-y divide-slate-100 text-xs">
                         <div className="py-3 flex items-center justify-between">
                           <span className="text-slate-600 font-medium">Individual Deductible:</span>
-                          <span className="font-mono text-slate-900 font-semibold">
-                            {formatCurrency(currentAnalysis.deductibleApplicable)}
+                          <span className={`font-mono font-semibold ${
+                            currentAnalysis.deductibleStatus === "not_determined" || currentAnalysis.deductibleApplicable == null
+                              ? "text-slate-500 italic text-[11px]"
+                              : "text-slate-900"
+                          }`}>
+                            {currentAnalysis.deductibleStatus === "not_determined" || currentAnalysis.deductibleApplicable == null
+                              ? "Not Determined"
+                              : formatCurrency(currentAnalysis.deductibleApplicable)}
                           </span>
                         </div>
 
@@ -607,7 +720,7 @@ export default function CoveragePage() {
                       Test custom billing quotes, deluxe suite room-rent penalties, and consumable
                       variations in the Cost Simulator.
                     </p>
-                    <Link href="/simulator" className="block pt-1">
+                    <Link href={policy?.id ? `/simulator?policyId=${policy.id}` : "/simulator"} className="block pt-1">
                       <Button
                         variant="teal"
                         size="sm"
@@ -638,3 +751,18 @@ export default function CoveragePage() {
     </div>
   );
 }
+
+export default function CoveragePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#F8F9FF]">
+          <div className="w-8 h-8 border-3 border-[#0052D1] border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <CoverageContent />
+    </Suspense>
+  );
+}
+

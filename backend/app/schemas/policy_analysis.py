@@ -66,7 +66,12 @@ class AnalysisDetailResponse(BaseModel):
     status: str
     coverage_status: str
     coverage_information: str
+    coverage_percentage: Optional[float] = None
+    coverage_limit_percentage_of_si: Optional[float] = None
+    policy_coverage_cap: Optional[float] = None
     deductible: Optional[float] = None
+    deductible_status: Optional[str] = "not_determined"
+    is_conditional_on_deductible: Optional[bool] = None
     copay: Optional[float] = None
     copay_percentage: Optional[float] = None
     coverage_limit: Optional[float] = None
@@ -75,6 +80,9 @@ class AnalysisDetailResponse(BaseModel):
     confidence: float = 0.0
     explanation: str
     evidence_references: List[EvidenceReferenceResponse] = []
+    estimated_total_cost: Optional[float] = None
+    estimated_insurer_share: Optional[float] = None
+    estimated_patient_share: Optional[float] = None
     created_at: datetime
     updated_at: datetime
 

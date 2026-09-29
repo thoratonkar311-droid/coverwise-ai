@@ -223,6 +223,7 @@ class AIService:
             user_id=request.user_id,
             vector_store=self.vector_store,
             llm_client=self.llm_client,
+            conversation_history=request.conversation_history,
         )
 
         t_elapsed = (time.perf_counter() - t_start) * 1000.0
@@ -232,6 +233,7 @@ class AIService:
             question=raw_res["question"],
             answer=raw_res["answer"],
             grounded=raw_res["grounded"],
+            confidence=raw_res.get("confidence", "High" if raw_res.get("grounded") else "Insufficient evidence"),
             citations=raw_res.get("citations", []),
             retrieved_clauses_count=raw_res.get("retrieved_clauses_count", 0),
             is_live_model=raw_res.get("is_live_model", False),

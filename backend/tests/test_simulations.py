@@ -52,20 +52,33 @@ def test_simulation_route_alias_and_non_payable_items(client: TestClient) -> Non
 
 def test_simulation_with_policy_integration(client: TestClient) -> None:
     """Verify simulation inherits coverage rules from analyzed policy."""
-    # 1. Register policy
+    # 1. Register policy with contractual rules
     policy_res = client.post(
         "/api/policies",
-        json={"filename": "bajaj_allianz_silver.pdf", "insurer_name": "Bajaj Allianz"},
+        json={
+            "filename": "bajaj_allianz_silver.pdf",
+            "insurer_name": "Bajaj Allianz",
+            "raw_metadata": {
+                "limits": [
+                    {
+                        "service_or_category": "Total Knee Replacement",
+                        "limit_value": 600000.0,
+                        "copay_percentage": 0.0,
+                        "coverage_status": "covered",
+                    }
+                ]
+            },
+        },
     )
     policy_id = policy_res.json()["id"]
 
-    # 2. Run analysis for Knee replacement (sets 10% copay, 250,000 limit, 5000 deductible)
+    # 2. Run analysis for Knee replacement (contractual: 600,000 limit, 0% network copay, deductible not determined)
     client.post(
         "/api/analyses",
         json={"policy_id": policy_id, "treatment_name": "Total Knee Replacement"},
     )
 
-    # 3. Simulate quote against policy without overrides
+    # 3. Simulate quote within contractual limit (300,000 <= 600,000 cap)
     sim_res = client.post(
         "/api/simulations",
         json={
@@ -77,9 +90,23 @@ def test_simulation_with_policy_integration(client: TestClient) -> None:
     assert sim_res.status_code == 201
     sim_data = sim_res.json()
     assert sim_data["policy_id"] == policy_id
-    assert sim_data["estimated_insurance_share"] > 0
-    assert sim_data["estimated_patient_share"] > 0
+    assert sim_data["estimated_insurance_share"] == 300000.0
+    assert sim_data["estimated_patient_share"] == 0.0
     assert round(sim_data["estimated_insurance_share"] + sim_data["estimated_patient_share"], 2) == 300000.0
+
+    # 4. Simulate quote exceeding contractual cap (700,000 > 600,000 cap)
+    sim_cap_res = client.post(
+        "/api/simulations",
+        json={
+            "policy_id": policy_id,
+            "treatment_name": "Total Knee Replacement",
+            "hospital_quote": 700000.0,
+        },
+    )
+    assert sim_cap_res.status_code == 201
+    cap_data = sim_cap_res.json()
+    assert cap_data["estimated_insurance_share"] == 600000.0
+    assert cap_data["estimated_patient_share"] == 100000.0
 
 
 def test_simulation_get_by_id_and_policy_list(client: TestClient) -> None:

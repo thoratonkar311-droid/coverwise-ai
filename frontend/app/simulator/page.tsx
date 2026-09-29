@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -14,8 +15,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { api, parseApiError } from "@/lib/api";
-import { calculateMockSimulation } from "@/lib/mock-data";
-import { SimulationRequest, SimulationResult, ApiError } from "@/types";
+import { SimulationRequest, SimulationResult, PolicySummary, ApiError } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import {
   PieChart,
@@ -44,12 +44,12 @@ interface PresetTreatment {
 const PRESETS: Record<string, PresetTreatment> = {
   knee: {
     name: "Total Knee Replacement",
-    quote: 260000,
-    room: "Single Private Room (Within Cap)",
-    deductible: 15000,
-    copay: 10,
-    limit: 500000,
-    consumables: 8000,
+    quote: 250000,
+    room: "Single Private Room",
+    deductible: 0,
+    copay: 0,
+    limit: 1000000,
+    consumables: 0,
   },
   cataract: {
     name: "Cataract Surgery (Monofocal)",
@@ -57,7 +57,7 @@ const PRESETS: Record<string, PresetTreatment> = {
     room: "Daycare (No Room Charge)",
     deductible: 0,
     copay: 0,
-    limit: 50000,
+    limit: 1000000,
     consumables: 3375,
   },
   mri: {
@@ -66,42 +66,43 @@ const PRESETS: Record<string, PresetTreatment> = {
     room: "Outpatient Center",
     deductible: 0,
     copay: 0,
-    limit: 25000,
+    limit: 1000000,
     consumables: 3000,
   },
   angioplasty: {
     name: "Coronary Angioplasty (Single Stent)",
     quote: 210000,
-    room: "Single Private Room (Within Cap)",
-    deductible: 15000,
-    copay: 10,
-    limit: 500000,
+    room: "Single Private Room",
+    deductible: 0,
+    copay: 0,
+    limit: 1000000,
     consumables: 14000,
   },
 };
 
-export default function SimulatorPage() {
-  const [screenState, setScreenState] = useState<ScreenState>("success");
-  const [selectedPreset, setSelectedPreset] = useState<string>("knee");
-  const [treatmentName, setTreatmentName] = useState<string>(PRESETS.knee.name);
-  const [hospitalQuote, setHospitalQuote] = useState<number>(PRESETS.knee.quote);
-  const [roomCategory, setRoomCategory] = useState<string>(PRESETS.knee.room);
-  const [deductible, setDeductible] = useState<number>(PRESETS.knee.deductible);
-  const [copayPercent, setCopayPercent] = useState<number>(PRESETS.knee.copay);
-  const [coverageLimit, setCoverageLimit] = useState<number>(PRESETS.knee.limit);
-  const [consumables, setConsumables] = useState<number>(PRESETS.knee.consumables);
+function SimulatorContent() {
+  const searchParams = useSearchParams();
+  const policyIdParam = searchParams.get("policyId");
 
-  const [calculation, setCalculation] = useState<SimulationResult | null>(() =>
-    calculateMockSimulation({
-      treatment: PRESETS.knee.name,
-      hospitalQuote: PRESETS.knee.quote,
-      roomCategory: PRESETS.knee.room,
-      deductible: PRESETS.knee.deductible,
-      copayPercent: PRESETS.knee.copay,
-      coverageLimit: PRESETS.knee.limit,
-      consumablesEstimate: PRESETS.knee.consumables,
-    })
-  );
+  const [activePolicyId, setActivePolicyId] = useState<string | null>(() => {
+    if (policyIdParam) return policyIdParam;
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("coverwise_active_policy_id");
+    }
+    return null;
+  });
+
+  const [activePolicy, setActivePolicy] = useState<PolicySummary | null>(null);
+  const [screenState, setScreenState] = useState<ScreenState>("loading");
+  const [selectedPreset, setSelectedPreset] = useState<string>("knee");
+  const [treatmentName, setTreatmentName] = useState<string>("Total Knee Replacement");
+  const [hospitalQuote, setHospitalQuote] = useState<number>(250000);
+  const [roomCategory, setRoomCategory] = useState<string>("Single Private Room");
+  const [deductible, setDeductible] = useState<number>(0);
+  const [copayPercent, setCopayPercent] = useState<number>(0);
+  const [coverageLimit, setCoverageLimit] = useState<number>(1000000);
+  const [consumables, setConsumables] = useState<number>(0);
+  const [calculation, setCalculation] = useState<SimulationResult | null>(null);
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
   const [apiError, setApiError] = useState<ApiError | null>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -113,6 +114,7 @@ export default function SimulatorPage() {
       const result = await api.createSimulation(requestPayload);
       setCalculation(result);
       setApiError(null);
+      setScreenState("success");
     } catch (err) {
       setApiError(parseApiError(err));
       setScreenState("error");
@@ -121,12 +123,71 @@ export default function SimulatorPage() {
     }
   }, []);
 
+  // Initialize and resolve active policy
+  useEffect(() => {
+    let isMounted = true;
+    async function initPolicy() {
+      let targetId = activePolicyId;
+      if (!targetId) {
+        try {
+          const overview = await api.getDashboardOverview();
+          if (overview.activePolicy) {
+            targetId = String(overview.activePolicy.id);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("coverwise_active_policy_id", targetId);
+            }
+            if (isMounted) setActivePolicyId(targetId);
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!targetId) {
+        if (isMounted) setScreenState("empty");
+        return;
+      }
+
+      try {
+        const p = await api.getPolicyById(targetId);
+        if (!isMounted || !p) return;
+        setActivePolicy(p);
+        const initDeductible = p.deductible ?? 0;
+        const initCopay = p.copayPercent ?? 0;
+        const initLimit = p.sumInsured ?? 1000000;
+        setDeductible(initDeductible);
+        setCopayPercent(initCopay);
+        setCoverageLimit(initLimit);
+
+        // Run initial simulation calculation with policy rules
+        runSimulation({
+          policyId: targetId,
+          treatment: "Total Knee Replacement",
+          hospitalQuote: 250000,
+          roomCategory: "Single Private Room",
+          deductible: initDeductible,
+          copayPercent: initCopay,
+          coverageLimit: initLimit,
+          consumablesEstimate: 0,
+        });
+      } catch {
+        if (isMounted) setScreenState("empty");
+      }
+    }
+
+    initPolicy();
+    return () => {
+      isMounted = false;
+    };
+  }, [activePolicyId, runSimulation]);
+
   // Debounced effect whenever inputs change
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
       const payload: SimulationRequest = {
+        policyId: activePolicyId || undefined,
         treatment: treatmentName,
         hospitalQuote,
         roomCategory,
@@ -142,6 +203,7 @@ export default function SimulatorPage() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [
+    activePolicyId,
     treatmentName,
     hospitalQuote,
     roomCategory,
@@ -160,10 +222,16 @@ export default function SimulatorPage() {
       setTreatmentName(p.name);
       setHospitalQuote(p.quote);
       setRoomCategory(p.room);
-      setDeductible(p.deductible);
-      setCopayPercent(p.copay);
-      setCoverageLimit(p.limit);
       setConsumables(p.consumables);
+      if (activePolicy) {
+        setDeductible(activePolicy.deductible ?? 0);
+        setCopayPercent(activePolicy.copayPercent ?? 0);
+        setCoverageLimit(activePolicy.sumInsured ?? 1000000);
+      } else {
+        setDeductible(p.deductible);
+        setCopayPercent(p.copay);
+        setCoverageLimit(p.limit);
+      }
     }
   };
 
@@ -250,7 +318,7 @@ export default function SimulatorPage() {
             </span>
             <div className="flex flex-wrap gap-2">
               {[
-                { key: "knee", label: "Knee Replacement (₹2.6L)" },
+                { key: "knee", label: "Knee Replacement (₹2.5L)" },
                 { key: "cataract", label: "Cataract (₹45k)" },
                 { key: "mri", label: "Brain MRI (₹22k)" },
                 { key: "angioplasty", label: "Angioplasty (₹2.1L)" },
@@ -309,7 +377,7 @@ export default function SimulatorPage() {
               <EmptyState
                 title="No Active Cost Simulation"
                 description="Select a treatment preset or adjust the parameters to compute insurance coverage and patient out-of-pocket costs."
-                actionLabel="Load Knee Replacement Demo"
+                actionLabel="Calculate Knee Replacement"
                 onAction={() => handleSelectPreset("knee")}
               />
             </Card>
@@ -390,14 +458,14 @@ export default function SimulatorPage() {
                         onChange={(e) => setRoomCategory(e.target.value)}
                         className="w-full text-xs sm:text-sm px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#1769FF] bg-white cursor-pointer"
                       >
-                        <option value="Single Private Room (Within Cap)">
-                          Single Private Room (Within ₹5,000 Limit)
+                        <option value="Single Private Room">
+                          Single Private Room
                         </option>
                         <option value="Shared Twin Room">
-                          Shared Twin Room (Zero Penalty)
+                          Shared Twin Room
                         </option>
-                        <option value="Deluxe Suite (Exceeds Limit by ₹3,000/day)">
-                          Deluxe Suite (Triggers 12% Proportionate Deduction)
+                        <option value="Deluxe Suite">
+                          Deluxe Suite
                         </option>
                         <option value="Daycare (No Room Charge)">
                           Daycare Procedure (No Room Fee)
@@ -487,7 +555,7 @@ export default function SimulatorPage() {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="teal" size="xs">
-                        DEMO ESTIMATE
+                        Policy Calculation
                       </Badge>
                       <span className="text-xs text-slate-500 font-mono">
                         {screenState === "not_determined"
@@ -707,3 +775,18 @@ export default function SimulatorPage() {
     </div>
   );
 }
+
+export default function SimulatorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#F8F9FF]">
+          <div className="w-8 h-8 border-3 border-[#0052D1] border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <SimulatorContent />
+    </Suspense>
+  );
+}
+

@@ -52,15 +52,17 @@ export function HeroSection() {
 
             {/* Call To Actions */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto pt-1">
-              <Button
-                variant="primary"
-                size="lg"
-                leftIcon={<FileUp className="w-4 h-4" />}
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-                className="shadow-md shadow-blue-600/20 font-semibold"
-              >
-                Analyze My Policy
-              </Button>
+              <Link href="/analyze" className="w-full sm:w-auto">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  leftIcon={<FileUp className="w-4 h-4" />}
+                  rightIcon={<ArrowRight className="w-4 h-4" />}
+                  className="w-full sm:w-auto shadow-md shadow-blue-600/20 font-semibold"
+                >
+                  Analyze My Policy
+                </Button>
+              </Link>
               <Link href="#how-it-works">
                 <Button
                   variant="outline"

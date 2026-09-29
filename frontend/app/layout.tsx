@@ -35,6 +35,9 @@ export const metadata: Metadata = {
   authors: [{ name: "CoverWise AI Team" }],
 };
 
+import { AuthProvider } from "@/lib/auth-context";
+import { AuthModal } from "@/components/auth/AuthModal";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -43,7 +46,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-[#F8F9FF] text-[#0A1D2E] antialiased selection:bg-[#EEF4FF] selection:text-[#0052D1]">
-        {children}
+        <AuthProvider>
+          {children}
+          <AuthModal />
+        </AuthProvider>
       </body>
     </html>
   );

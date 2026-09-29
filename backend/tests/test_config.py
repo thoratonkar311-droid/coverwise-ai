@@ -11,7 +11,9 @@ def test_settings_defaults() -> None:
     assert settings.is_development is True
     assert settings.is_production is False
     assert settings.API_V1_STR == "/api"
-    assert settings.SECRET_KEY == "change_this_value"
+    default_secret = Settings.model_fields["SECRET_KEY"].default
+    assert default_secret == "change_this_value"
+    assert len(settings.SECRET_KEY) > 0
 
 
 

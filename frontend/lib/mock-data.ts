@@ -381,6 +381,193 @@ export const DEMO_DASHBOARD_OVERVIEW: DashboardOverview = {
   costComparisonChart: DEMO_COST_CHART_DATA,
 };
 
+export const DEMO_BENCHMARK_TREATMENTS = [
+  {
+    treatment_id: "TRT-KNEE-01",
+    treatment_name: "Total Knee Replacement (Unilateral)",
+    category: "Orthopedics",
+    city: "Mumbai",
+    hospital_type: "Tier 1 Multi-Specialty Hospital",
+    inpatient_outpatient: "inpatient",
+    min_cost: 180000,
+    typical_cost: 240000,
+    max_cost: 320000,
+    currency: "INR",
+    length_of_stay_days: 4,
+    description: "Unilateral total knee arthroplasty including standard implant, pre-op clearance, and acute post-op rehabilitation."
+  },
+  {
+    treatment_id: "TRT-CATARACT-01",
+    treatment_name: "Cataract Surgery with Monofocal IOL",
+    category: "Ophthalmology",
+    city: "Delhi NCR",
+    hospital_type: "Daycare Eye Specialty Clinic",
+    inpatient_outpatient: "outpatient",
+    min_cost: 30000,
+    typical_cost: 45000,
+    max_cost: 65000,
+    currency: "INR",
+    length_of_stay_days: 0,
+    description: "Daycare phacoemulsification with posterior chamber foldable monofocal intraocular lens."
+  },
+  {
+    treatment_id: "TRT-ANGIO-01",
+    treatment_name: "Coronary Angioplasty (PTCA with Drug-Eluting Stent)",
+    category: "Cardiology",
+    city: "Bengaluru",
+    hospital_type: "Tertiary Cardiac Center",
+    inpatient_outpatient: "inpatient",
+    min_cost: 160000,
+    typical_cost: 220000,
+    max_cost: 310000,
+    currency: "INR",
+    length_of_stay_days: 3,
+    description: "Percutaneous transluminal coronary angioplasty with single drug-eluting stent (DES) and ICU monitoring."
+  },
+  {
+    treatment_id: "TRT-APP-01",
+    treatment_name: "Laparoscopic Appendectomy",
+    category: "General Surgery",
+    city: "Hyderabad",
+    hospital_type: "Multi-Specialty Hospital",
+    inpatient_outpatient: "inpatient",
+    min_cost: 65000,
+    typical_cost: 95000,
+    max_cost: 140000,
+    currency: "INR",
+    length_of_stay_days: 2,
+    description: "Minimally invasive laparoscopic removal of vermiform appendix under general anesthesia."
+  },
+  {
+    treatment_id: "TRT-HERNIA-01",
+    treatment_name: "Laparoscopic Inguinal Hernia Repair (Mesh)",
+    category: "General Surgery",
+    city: "Pune",
+    hospital_type: "Surgical Nursing Home",
+    inpatient_outpatient: "inpatient",
+    min_cost: 55000,
+    typical_cost: 85000,
+    max_cost: 125000,
+    currency: "INR",
+    length_of_stay_days: 2,
+    description: "TAPP/TEP laparoscopic hernia repair using polypropylene mesh reinforcement."
+  },
+  {
+    treatment_id: "TRT-DELIVERY-01",
+    treatment_name: "Normal Vaginal Delivery",
+    category: "Obstetrics & Gynecology",
+    city: "Chennai",
+    hospital_type: "Maternity Specialty Center",
+    inpatient_outpatient: "inpatient",
+    min_cost: 40000,
+    typical_cost: 65000,
+    max_cost: 95000,
+    currency: "INR",
+    length_of_stay_days: 2,
+    description: "Uncomplicated normal vaginal delivery including routine intrapartum monitoring and pediatrician attendance."
+  }
+];
+
+export const DEMO_CONVERSATION_SESSION = {
+  id: 1,
+  policyId: 1,
+  title: "Knee Replacement & Room Rent Coverage Consultation",
+  contextMetadata: {
+    planName: "Care Premier Health Assurance Plan",
+    policyNumber: "CH-2026-9812401"
+  },
+  createdAt: new Date(Date.now() - 3600000).toISOString(),
+  updatedAt: new Date().toISOString(),
+  messages: [
+    {
+      id: 101,
+      conversationId: 1,
+      role: "user" as const,
+      content: "Is knee replacement surgery covered under this policy, and what out-of-pocket costs should I expect if the quote is ₹2,50,000 in Mumbai?",
+      isGrounded: true,
+      treatmentScenario: {
+        procedureName: "Total Knee Replacement",
+        hospitalQuote: 250000,
+        city: "Mumbai",
+        hospitalTier: "Tier 1 Multi-Specialty Hospital",
+        roomTier: "Single Private Room"
+      },
+      evidenceReferences: [],
+      createdAt: new Date(Date.now() - 1800000).toISOString()
+    },
+    {
+      id: 102,
+      conversationId: 1,
+      role: "assistant" as const,
+      content: "Yes, Total Knee Replacement is **covered** under Section 4.1.2 with a specific sub-limit of ₹2,50,000 and a mandatory 10% co-payment. A standard 24-month waiting period applies for pre-existing orthopedic conditions (Section 1.3). For a hospital quote of ₹2,50,000, your estimated patient responsibility is ₹40,000 (comprising ₹15,000 deductible + ₹25,000 co-payment), and the insurer covers ₹2,10,000.",
+      confidence: "High",
+      isGrounded: true,
+      evidenceReferences: [
+        {
+          id: 201,
+          documentSource: "Care Premier Policy Schedule 2026.pdf",
+          page: 4,
+          clauseSection: "Section 4.1.2 - Joint Replacement Sub-limits",
+          extractedText: "Joint Replacement and Orthopedic Surgeries are admissible subject to a procedure ceiling of INR 2,50,000 per policy year and a mandatory 10% co-payment on admissible charges.",
+          interpretation: "10% co-payment applies directly to admissible surgery expenses up to the ₹2,50,000 sublimit.",
+          confidence: 0.98
+        },
+        {
+          id: 202,
+          documentSource: "Care Premier Policy Schedule 2026.pdf",
+          page: 2,
+          clauseSection: "Section 2.4 - Room Rent and Boarding Ceiling",
+          extractedText: "Admissible room category is Single Private Room capped at INR 5,000 per day. Proportionate deductions apply across associated medical fees if higher tier chosen.",
+          interpretation: "Staying within Single Private Room avoids proportionate deduction penalties.",
+          confidence: 0.96
+        }
+      ],
+      costEstimate: {
+        treatmentName: "Total Knee Replacement (Unilateral)",
+        benchmarkTreatmentId: "TRT-KNEE-01",
+        currency: "INR",
+        isBenchmarkMatched: true,
+        benchmarkTypicalCost: 240000,
+        benchmarkCostRange: { min: 180000, max: 320000 },
+        estimatedTotalCost: 250000,
+        potentiallyEligibleAmount: 250000,
+        estimatedInsurerContribution: 210000,
+        estimatedPatientResponsibility: 40000,
+        deductibleApplied: 15000,
+        copayApplied: 25000,
+        excessOverLimit: 0,
+        nonPayableExcluded: 0,
+        roomRentPenalty: 0,
+        confidenceLevel: "High",
+        coverageStatus: "Covered with 10% Co-pay",
+        drivingFactors: [
+          {
+            factorName: "Policy Deductible",
+            impactAmount: 15000,
+            description: "Annual deductible applied before insurance coverage initiates.",
+            citation: "Section 1.2"
+          },
+          {
+            factorName: "10% Procedure Co-pay",
+            impactAmount: 25000,
+            description: "10% mandatory co-payment on joint replacement expenses.",
+            citation: "Section 4.1.2"
+          },
+          {
+            factorName: "Benchmark Comparison",
+            description: "Hospital quote of ₹2,50,000 aligns closely with Mumbai synthetic benchmark average (₹2,40,000)."
+          }
+        ],
+        missingInformation: [],
+        uncertaintyNotes: [],
+        assumptions: ["Single private room ceiling adhered to", "In-network cashless pre-authorization"],
+        disclaimer: "Figures are indicative simulations based on extracted policy rules and synthetic benchmark costs. Actual hospital billing and settlement depend on final discharge summary."
+      },
+      createdAt: new Date(Date.now() - 1790000).toISOString()
+    }
+  ]
+};
+
 /**
  * Mock rules engine calculation for /api/simulations.
  * Simulates backend financial calculation engine response while keeping frontend decoupled.

@@ -38,7 +38,9 @@ def test_alembic_migration_script_integrity() -> None:
     assert len(heads) == 1, f"Expected exactly 1 migration head, got: {heads}"
     head_revision = script.get_revision(heads[0])
     assert head_revision is not None
-    assert "initial_schema" in head_revision.doc
+    all_revisions = [rev.doc for rev in script.walk_revisions()]
+    assert any("initial_schema" in d for d in all_revisions)
+    assert any("conversation" in d for d in all_revisions)
 
 
 def test_alembic_migration_execution_and_downgrade(tmp_path: Path) -> None:

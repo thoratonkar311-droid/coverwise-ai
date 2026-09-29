@@ -218,20 +218,46 @@ class PolicyExtractor:
             text = page.text
             lower_text = text.lower()
 
-            # Metadata candidates (usually page 1 or headers)
-            if "plan name:" in lower_text or "insurer:" in lower_text or "policy id:" in lower_text:
+            # Metadata candidates (usually page 1 or 2, headers, CIS, UIN, policy schedule)
+            if (
+                page.page_number <= 2
+                or "plan name:" in lower_text
+                or "insurer:" in lower_text
+                or "policy id:" in lower_text
+                or "customer information sheet" in lower_text
+                or "uin:" in lower_text
+                or "product name" in lower_text
+                or "policy schedule" in lower_text
+                or "insurance company" in lower_text
+            ):
                 sections["metadata"].append((page.page_number, text))
 
-            # Deductibles & Out-of-Pocket
-            if "deductible" in lower_text or "out-of-pocket" in lower_text:
+            # Deductibles & Out-of-Pocket / Sum Insured
+            if (
+                "deductible" in lower_text
+                or "out-of-pocket" in lower_text
+                or "sum insured" in lower_text
+                or "payout basis" in lower_text
+            ):
                 sections["deductibles"].append((page.page_number, text))
 
-            # Copays & Drug tiers
-            if "copay" in lower_text or "prescription" in lower_text:
+            # Copays & Drug tiers / Cost sharing
+            if (
+                "copay" in lower_text
+                or "co-pay" in lower_text
+                or "cost sharing" in lower_text
+                or "prescription" in lower_text
+            ):
                 sections["copays"].append((page.page_number, text))
 
-            # Coinsurance
-            if "coinsurance" in lower_text:
+            # Coinsurance / Co-payments
+            if (
+                "coinsurance" in lower_text
+                or "co-payment" in lower_text
+                or "cost sharing" in lower_text
+                or "co-pay" in lower_text
+                or "copay" in lower_text
+            ):
                 sections["coinsurance"].append((page.page_number, text))
 
             # Surgical & Prior Auth
@@ -239,7 +265,12 @@ class PolicyExtractor:
                 sections["surgical"].append((page.page_number, text))
 
             # Exclusions & Limitations
-            if "exclusion" in lower_text or "excluded" in lower_text or "limitations" in lower_text:
+            if (
+                "exclusion" in lower_text
+                or "excluded" in lower_text
+                or "limitations" in lower_text
+                or "not covered" in lower_text
+            ):
                 sections["exclusions"].append((page.page_number, text))
 
             sections["general"].append((page.page_number, text))
@@ -270,26 +301,48 @@ class PolicyExtractor:
         """Extract policy metadata (insurer, policy_id, dates, network)."""
         meta = PolicyDocumentMetadata()
 
-        # Check metadata sections first (typically page 1)
+        # Check metadata sections first (typically page 1 or 2)
         target_pages = sections.get("metadata") or sections.get("general") or []
         for page_num, text in target_pages:
-            # Policy ID
+            # Policy ID / UIN / Policy Number
             if not meta.policy_id:
                 m = re.search(r"Policy\s+ID:\s*([A-Za-z0-9\-_]+)", text, re.IGNORECASE)
+                if not m:
+                    m = re.search(r"\bUIN\s*:\s*([A-Za-z0-9\-_/]+)", text, re.IGNORECASE)
+                if not m:
+                    m = re.search(r"Policy\s+(?:No\.?|Number)\s*[:.]?\s*([A-Za-z0-9\-_/]+)", text, re.IGNORECASE)
                 if m:
                     meta.policy_id = m.group(1).strip()
 
             # Insurer Name
             if not meta.insurer_name:
                 m = re.search(r"Insurer:\s*([^\n\r]+)", text, re.IGNORECASE)
+                if not m:
+                    m = re.search(
+                        r"([A-Za-z\s]+(?:Insurance\s+Company\s+Limited|Health\s+Insurance\s+Co\.?\s+Ltd|General\s+Insurance\s+Company\s+Limited|General\s+Insurance|Assurance\s+Company\s+Limited|Insurance\s+Limited))",
+                        text,
+                        re.IGNORECASE,
+                    )
                 if m:
-                    meta.insurer_name = m.group(1).strip()
+                    cleaned_ins = re.sub(r"\s+", " ", m.group(1)).strip()
+                    if len(cleaned_ins) > 5:
+                        meta.insurer_name = cleaned_ins
 
-            # Plan Name
+            # Plan Name / Product Name
             if not meta.policy_name:
                 m = re.search(r"Plan\s+Name:\s*([^\n\r]+)", text, re.IGNORECASE)
+                if not m:
+                    m = re.search(r"Product\s+Name\s*\n?\s*([^\n\r]+)", text, re.IGNORECASE)
+                if not m:
+                    m = re.search(
+                        r"(Health\s+Insurance\s+Policy\s*-\s*[A-Za-z\s]+|Retail\s+Health\s+Insurance|Arogya\s+Sanjeevani\s+Policy|Optima\s+Restore|ProHealth\s+Plus)",
+                        text,
+                        re.IGNORECASE,
+                    )
                 if m:
-                    meta.policy_name = m.group(1).strip()
+                    cleaned_plan = re.sub(r"\s+", " ", m.group(1)).strip()
+                    if len(cleaned_plan) > 3:
+                        meta.policy_name = cleaned_plan
 
             # Plan Year
             if not meta.plan_year:
@@ -313,8 +366,11 @@ class PolicyExtractor:
             # Network Name
             if not meta.network_name:
                 m = re.search(r"Network:\s*([^\n\r]+)", text, re.IGNORECASE)
+                if not m:
+                    m = re.search(r"([A-Za-z\s]+(?:Cashless\s+Hospital\s+Network|Cashless\s+Network|Network\s+Hospitals?|Preferred\s+Provider\s+Network))", text, re.IGNORECASE)
                 if m:
-                    meta.network_name = m.group(1).strip()
+                    cleaned_net = re.sub(r"\s+", " ", m.group(1)).strip()
+                    meta.network_name = cleaned_net
 
         return meta, "deterministic"
 
@@ -385,6 +441,23 @@ class PolicyExtractor:
                             clause_reference="Section 1.1 Annual Deductible",
                         )
                     )
+
+            # General / Annual Deductible (e.g. "Compulsory Annual Deductible: INR 10,000" or "deductible of INR 10,000")
+            if ded.individual_in_network is None:
+                # Exclude explicit nil/no deductible statements
+                if not re.search(r"(?:no|nil|zero|without|not\s+applicable)\s+(?:compulsory\s+|annual\s+)?deductible", text, re.IGNORECASE):
+                    m_gen = re.search(r"(?:compulsory|annual|mandatory|base)?\s*deductible(?:\s+of\s+|[^\n0-9]*?(?:[:\-]|\bis\b)\s*(?:an?\s+(?:annual\s+)?deductible\s+of\s+)?)(?:[\$₹€]|INR\s*|Rs\.?\s*)?\s*([0-9][0-9,]*(?:\.[0-9]{2})?)", text, re.IGNORECASE)
+                    if m_gen:
+                        val = float(m_gen.group(1).replace(",", ""))
+                        if val > 0:
+                            ded.individual_in_network = val
+                            ded.evidence.append(
+                                EvidenceSpan(
+                                    text=m_gen.group(0).strip(),
+                                    page_number=page_num,
+                                    clause_reference="Annual Deductible Clause",
+                                )
+                            )
 
         return ded, "deterministic"
 
@@ -542,6 +615,56 @@ class PolicyExtractor:
                         )
                     )
 
+            # IRDAI / Cost sharing co-payment (e.g. "10% of each claim as co-payment in case of non network hospitalisation")
+            if coins.out_of_network_percentage is None:
+                m_non_net = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:of\s+each\s+claim\s+as\s+)?co-payment\s+in\s+case\s+of\s+non[- ]network", text, re.IGNORECASE)
+                if m_non_net:
+                    coins.out_of_network_percentage = float(m_non_net.group(1))
+                    if coins.in_network_percentage is None:
+                        coins.in_network_percentage = 0.0
+                    coins.evidence.append(
+                        EvidenceSpan(
+                            text=m_non_net.group(0).strip(),
+                            page_number=page_num,
+                            clause_reference="Cost Sharing / Co-payment Clause",
+                        )
+                    )
+
+            # Structured Co-Pay Schedule (e.g. "Network hospitalization: 0%", "In-Network Hospitals: Co-payment is 0%", "Mandatory Co-Payment: A 20% co-payment...")
+            if coins.in_network_percentage is None:
+                m_net = re.search(r"(?<!non-)(?:in-)?network[^\n]*?(?:co-?payment|co-?pay|coinsurance)[^\n]*?([0-9]+(?:\.[0-9]+)?)\s*%", text, re.IGNORECASE)
+                if not m_net:
+                    m_net = re.search(r"(?:co-?payment|co-?pay|coinsurance)[^\n]*?(?<!non-)(?:in-)?network[^\n]*?([0-9]+(?:\.[0-9]+)?)\s*%", text, re.IGNORECASE)
+                if not m_net:
+                    m_net = re.search(r"(?<!non-)network(?:\s+hospitalization|\s+co-?pay|\s+provider)?\s*[:\-]?\s*([0-9]+(?:\.[0-9]+)?)\s*%", text, re.IGNORECASE)
+                if not m_net:
+                    m_net = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:for|in\s+case\s+of)?\s*(?<!non-)network", text, re.IGNORECASE)
+                if not m_net:
+                    m_net = re.search(r"(?:mandatory|general)\s+co-?pay(?:ment)?\s*[:\-]?\s*(?:a\s+)?([0-9]+(?:\.[0-9]+)?)\s*%", text, re.IGNORECASE)
+                if m_net:
+                    coins.in_network_percentage = float(m_net.group(1))
+                    coins.evidence.append(
+                        EvidenceSpan(
+                            text=m_net.group(0).strip(),
+                            page_number=page_num,
+                            clause_reference="Network Co-Pay Clause",
+                        )
+                    )
+
+            if coins.out_of_network_percentage is None:
+                m_non = re.search(r"non-network[^\n]*?(?:co-?payment|co-?pay|coinsurance)?[^\n]*?([0-9]+(?:\.[0-9]+)?)\s*%", text, re.IGNORECASE)
+                if not m_non:
+                    m_non = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:for|in\s+case\s+of)?\s*non-network", text, re.IGNORECASE)
+                if m_non:
+                    coins.out_of_network_percentage = float(m_non.group(1))
+                    coins.evidence.append(
+                        EvidenceSpan(
+                            text=m_non.group(0).strip(),
+                            page_number=page_num,
+                            clause_reference="Non-Network Co-Pay Clause",
+                        )
+                    )
+
         return coins, "deterministic"
 
     def _extract_out_of_pocket_max(
@@ -607,6 +730,21 @@ class PolicyExtractor:
                             clause_reference="Section 1.2 Annual Out-of-Pocket Maximum",
                         )
                     )
+
+            # Sum Insured / Maximum Limit of Indemnity
+            if oop.individual_in_network is None:
+                m_si = re.search(r"Sum\s+Insured\s*(?:Options|Limit)?\s*[:\-]?\s*(?:INR|Rs\.?|₹)?\s*([0-9,]+(?:\.[0-9]{2})?)", text, re.IGNORECASE)
+                if m_si:
+                    val = float(m_si.group(1).replace(",", ""))
+                    if val >= 50000:
+                        oop.individual_in_network = val
+                        oop.evidence.append(
+                            EvidenceSpan(
+                                text=m_si.group(0).strip(),
+                                page_number=page_num,
+                                clause_reference="Sum Insured Schedule",
+                            )
+                        )
 
         return oop, "deterministic"
 
@@ -717,6 +855,36 @@ class PolicyExtractor:
                         )
                     )
 
+            # IRDAI / CIS numbered exclusions
+            m_cis = re.search(
+                r"(?:major\s+Exclusions|Exclusions)\s*(?:in\s+the\s+policy)?.*?(?:Following\s+is\s+a\s+partial\s+list.*?)?Exclusions\s*[\n:](.*?)(?=(?:\n\s*[0-9]+\s+[A-Za-z]|\n\s*Waiting\s+period|\Z))",
+                text,
+                re.IGNORECASE | re.DOTALL,
+            )
+            if m_cis:
+                cis_text = m_cis.group(1).strip()
+                numbered_items = re.findall(r"^[ \t]*[0-9]+[.)]\s*(.+?)(?=(?:^[ \t]*[0-9]+[.)]|\Z))", cis_text, re.MULTILINE | re.DOTALL)
+                for item in numbered_items:
+                    cleaned_item = re.sub(r"\s+", " ", item).strip().rstrip(".") + "."
+                    if not cleaned_item or len(cleaned_item) < 5 or "partial listing" in cleaned_item.lower():
+                        continue
+                    if cleaned_item not in exclusions_list:
+                        exclusions_list.append(cleaned_item)
+                        cat = cleaned_item.split(" that ")[0].split(" primarily ")[0].rstrip(".")
+                        detailed_exclusions.append(
+                            ExclusionItem(
+                                category_or_service=cat,
+                                description=cleaned_item,
+                                evidence=[
+                                    EvidenceSpan(
+                                        text=cleaned_item,
+                                        page_number=page_num,
+                                        clause_reference="Major Exclusions Clause",
+                                    )
+                                ],
+                            )
+                        )
+
         return exclusions_list, detailed_exclusions, "deterministic"
 
     def _extract_limits(
@@ -787,6 +955,147 @@ class PolicyExtractor:
                     )
                 )
 
+            # Room Rent limits
+            m_rr = re.search(r"Room(?:\s*,\s*Board\s*&\s*Nursing)?\s*Rent\s*[:\-]?\s*(?:up\s+to\s+)?([0-9]+\s*%\s*of\s+Sum\s+Insured[^\.\n]*)", text, re.IGNORECASE)
+            if m_rr:
+                limits.append(
+                    PolicyLimit(
+                        service_or_category="Room Rent Daily Limit",
+                        limit_type="sublimit",
+                        limit_value=m_rr.group(1).strip(),
+                        details="Daily room rent capped as percentage of sum insured.",
+                        evidence=[
+                            EvidenceSpan(
+                                text=m_rr.group(0).strip(),
+                                page_number=page_num,
+                                clause_reference="Room Rent Sub-limits",
+                            )
+                        ],
+                    )
+                )
+
+            # Advance procedures sub-limits
+            m_adv = re.search(r"([0-9]+\s+Advance\s+procedure\s+upto\s+[0-9]+\s*%\s*of\s+Sum\s+Insured)", text, re.IGNORECASE)
+            if m_adv:
+                limits.append(
+                    PolicyLimit(
+                        service_or_category="Advance Medical Procedures",
+                        limit_type="sublimit",
+                        limit_value=m_adv.group(1).strip(),
+                        details="Advanced procedures covered up to specified percentage of sum insured.",
+                        evidence=[
+                            EvidenceSpan(
+                                text=m_adv.group(0).strip(),
+                                page_number=page_num,
+                                clause_reference="Advance Procedures Limit",
+                            )
+                        ],
+                    )
+                )
+
+            # Total Knee Replacement procedure cap (e.g. 60% of sum insured, max INR 600,000)
+            m_tkr = re.search(
+                r"(?:Total\s+Knee\s+Replacement\s*(?:cap)?|Joint\s+replacement\s+surgery)[^0-9\n]*?(?:Covered\s+)?(?:Up\s+to\s+)?([0-9]{1,3})\s*%\s*(?:of\s+sum\s+insured|of\s+SI)(?:[^\n]*?(?:max(?:imum)?(?:\s+limit)?(?:\s+of)?\s*(?:INR|Rs\.?|₹)?\s*([0-9,]+)|=\s*(?:INR|Rs\.?|₹)?\s*([0-9,]+)|\(\s*max\s*(?:INR|Rs\.?|₹)?\s*([0-9,]+)\s*\)))?",
+                text,
+                re.IGNORECASE,
+            )
+            if m_tkr:
+                pct = m_tkr.group(1)
+                cap = m_tkr.group(2) or m_tkr.group(3) or m_tkr.group(4)
+                limit_text = f"Up to {pct}% of sum insured (max INR {cap})" if cap else f"Up to {pct}% of sum insured"
+                details_text = f"Total Knee Replacement covered up to {pct}% of base sum insured, maximum INR {cap}." if cap else f"Total Knee Replacement covered up to {pct}% of base sum insured."
+                limits.append(
+                    PolicyLimit(
+                        service_or_category="Total Knee Replacement",
+                        limit_type="procedure_sublimit",
+                        limit_value=limit_text,
+                        details=details_text,
+                        evidence=[
+                            EvidenceSpan(
+                                text=m_tkr.group(0).strip(),
+                                page_number=page_num,
+                                clause_reference="Treatment-Specific Coverage Rules",
+                            )
+                        ],
+                    )
+                )
+
+            # Cataract surgery cap (e.g. INR 25,000 per eye)
+            m_cat = re.search(r"Cataract(?:\s+surgery|\s+cap)?[^0-9\n]*?(?:Covered\s+(?:up\s+to\s+)?)?(?:INR|Rs\.?|₹)?\s*([0-9,]+)\s*(?:per\s+eye|/eye)", text, re.IGNORECASE)
+            if m_cat:
+                limits.append(
+                    PolicyLimit(
+                        service_or_category="Cataract Surgery",
+                        limit_type="procedure_sublimit",
+                        limit_value=f"INR {m_cat.group(1)} per eye",
+                        details=f"Cataract surgery covered up to INR {m_cat.group(1)} per eye per policy year.",
+                        evidence=[
+                            EvidenceSpan(
+                                text=m_cat.group(0).strip(),
+                                page_number=page_num,
+                                clause_reference="Cataract Sub-limit Clause",
+                            )
+                        ],
+                    )
+                )
+
+            # Hernia repair cap (e.g. INR 75,000 per admission)
+            m_hernia = re.search(r"Hernia(?:\s+repair|\s+cap)?[^0-9\n]*?(?:Covered\s+(?:up\s+to\s+)?)?(?:INR|Rs\.?|₹)?\s*([0-9,]+)\s*(?:per\s+admission|/admission)", text, re.IGNORECASE)
+            if m_hernia:
+                limits.append(
+                    PolicyLimit(
+                        service_or_category="Hernia Repair",
+                        limit_type="procedure_sublimit",
+                        limit_value=f"INR {m_hernia.group(1)} per admission",
+                        details=f"Hernia repair covered up to INR {m_hernia.group(1)} per admission.",
+                        evidence=[
+                            EvidenceSpan(
+                                text=m_hernia.group(0).strip(),
+                                page_number=page_num,
+                                clause_reference="Hernia Sub-limit Clause",
+                            )
+                        ],
+                    )
+                )
+
+            # Single Private Room daily limit (e.g. INR 8,000/day)
+            m_room = re.search(r"Single\s+private\s+room\s*(?:up\s+to)?\s*(?:INR|Rs\.?|₹)?\s*([0-9,]+)\s*/\s*day", text, re.IGNORECASE)
+            if m_room:
+                limits.append(
+                    PolicyLimit(
+                        service_or_category="Single Private Room",
+                        limit_type="daily_room_limit",
+                        limit_value=f"INR {m_room.group(1)}/day",
+                        details=f"Eligible base room category: Single Private Room up to INR {m_room.group(1)}/day.",
+                        evidence=[
+                            EvidenceSpan(
+                                text=m_room.group(0).strip(),
+                                page_number=page_num,
+                                clause_reference="Room Category and Accommodation Rules",
+                            )
+                        ],
+                    )
+                )
+
+            # ICU daily limit (e.g. INR 20,000/day)
+            m_icu = re.search(r"ICU(?:\s+cap)?\s*(?:up\s+to)?\s*(?:INR|Rs\.?|₹)?\s*([0-9,]+)\s*/\s*day", text, re.IGNORECASE)
+            if m_icu:
+                limits.append(
+                    PolicyLimit(
+                        service_or_category="Intensive Care Unit (ICU)",
+                        limit_type="daily_room_limit",
+                        limit_value=f"INR {m_icu.group(1)}/day",
+                        details=f"ICU expenses covered up to INR {m_icu.group(1)}/day.",
+                        evidence=[
+                            EvidenceSpan(
+                                text=m_icu.group(0).strip(),
+                                page_number=page_num,
+                                clause_reference="Room Category and Accommodation Rules",
+                            )
+                        ],
+                    )
+                )
+
         return limits, "deterministic"
 
     def _extract_waiting_periods(
@@ -803,25 +1112,142 @@ class PolicyExtractor:
 
         # If found in text, extract details
         waiting_periods: list[WaitingPeriodInfo] = []
+        seen_descriptions = set()
+
         for page in document.pages:
+            # Standard pattern 1: waiting period of X days/months
             matches = list(re.finditer(r"(?:waiting\s+period\s+of\s+([0-9]+)\s+(days|months))", page.text, re.IGNORECASE))
             for m in matches:
                 qty = int(m.group(1))
                 unit = m.group(2).lower()
-                wp = WaitingPeriodInfo(
-                    condition_or_benefit="Pre-existing Conditions / Specified Benefits",
-                    duration_days=qty if "day" in unit else None,
-                    duration_months=qty if "month" in unit else None,
-                    description=m.group(0).strip(),
-                    evidence=[
-                        EvidenceSpan(
-                            text=m.group(0).strip(),
-                            page_number=page.page_number,
-                            clause_reference="Waiting Period Clause",
+                desc = m.group(0).strip()
+                if desc not in seen_descriptions:
+                    seen_descriptions.add(desc)
+                    wp = WaitingPeriodInfo(
+                        condition_or_benefit="Pre-existing Conditions / Specified Benefits",
+                        duration_days=qty if "day" in unit else None,
+                        duration_months=qty if "month" in unit else None,
+                        description=desc,
+                        evidence=[
+                            EvidenceSpan(
+                                text=desc,
+                                page_number=page.page_number,
+                                clause_reference="Waiting Period Clause",
+                            )
+                        ],
+                    )
+                    waiting_periods.append(wp)
+
+            # Pattern 2: Initial waiting period (e.g. 30 days)
+            m_init = re.search(r"Initial\s+waiting\s+period\s*[:\-]?\s*\n?\s*([0-9]+)\s*(days|months)", page.text, re.IGNORECASE)
+            if m_init:
+                qty = int(m_init.group(1))
+                unit = m_init.group(2).lower()
+                desc = m_init.group(0).strip()
+                if desc not in seen_descriptions:
+                    seen_descriptions.add(desc)
+                    waiting_periods.append(
+                        WaitingPeriodInfo(
+                            condition_or_benefit="Initial Illness Waiting Period",
+                            duration_days=qty if "day" in unit else None,
+                            duration_months=qty if "month" in unit else None,
+                            description=desc,
+                            evidence=[
+                                EvidenceSpan(
+                                    text=desc,
+                                    page_number=page.page_number,
+                                    clause_reference="Initial Waiting Period",
+                                )
+                            ],
                         )
-                    ],
-                )
-                waiting_periods.append(wp)
+                    )
+
+            # Pattern 3: Joint replacement / specific disease waiting period (e.g. 36 months for joint replacement)
+            m_joint = re.search(r"(?:(?:Joint\s+replacement\s+due(?:\s+to)?\s+degenerative\s+condition|Degenerative\s+joint\s+replacement\s+waiting)\s*[:\-]?\s*\n?\s*([0-9]+)\s*(days|months|years)|([0-9]+)\s*-(?:month|day|year)\s+waiting\s+if\s+degenerative[^\n\r]*)", page.text, re.IGNORECASE)
+            if not m_joint:
+                m_joint = re.search(r"([0-9]+)\s*(years?|months?)\s*(?:for|waiting\s+period\s+for)?\s*joint\s+replacement[^\n\r]*", page.text, re.IGNORECASE)
+            if not m_joint:
+                m_joint = re.search(r"(?:Specific\s+(?:Illness|Disease)(?:\s+Waiting(?:\s+Period)?)?\s*[:\-]?)?\s*([0-9]+)\s*(months?|years?|days?)\s+waiting(?:\s+period)?(?:\s+applies\s+to\s+([^\n\.\;]+))?", page.text, re.IGNORECASE)
+            if m_joint:
+                desc = m_joint.group(0).strip()
+                if desc not in seen_descriptions:
+                    seen_descriptions.add(desc)
+                    num_match = re.search(r"([0-9]+)\s*(years?|months?|days?)", desc, re.IGNORECASE)
+                    if num_match:
+                        qty = int(num_match.group(1))
+                        unit = num_match.group(2).lower()
+                        months = qty * 12 if "year" in unit else (qty if "month" in unit else None)
+                        days = qty if "day" in unit else None
+                    else:
+                        months = 36
+                        days = None
+                    full_desc = desc if "accident" in desc.lower() else f"{desc} (accident-related cases follow accident rule)"
+                    waiting_periods.append(
+                        WaitingPeriodInfo(
+                            condition_or_benefit="Major Joint Replacement Surgery (Degenerative Condition)",
+                            duration_months=months,
+                            duration_days=days,
+                            description=full_desc,
+                            evidence=[
+                                EvidenceSpan(
+                                    text=desc,
+                                    page_number=page.page_number,
+                                    clause_reference="Joint Replacement Waiting Period",
+                                )
+                            ],
+                        )
+                    )
+
+            # Pattern 4: Pre-existing diseases: Covered after 48 months / PED waiting: 48 months
+            m_ped = re.search(r"(?:Pre-existing\s+diseases?|PED)\s*(?:\(PED\))?(?:\s+waiting(?:\s+period)?)?\s*[:\-]?\s*\n?\s*(?:Covered\s+after\s*)?([0-9]+)\s*(months?|years?|days?)", page.text, re.IGNORECASE)
+            if m_ped:
+                qty = int(m_ped.group(1))
+                unit = m_ped.group(2).lower()
+                desc = m_ped.group(0).strip()
+                if desc not in seen_descriptions:
+                    seen_descriptions.add(desc)
+                    months = qty * 12 if "year" in unit else (qty if "month" in unit else None)
+                    waiting_periods.append(
+                        WaitingPeriodInfo(
+                            condition_or_benefit="Pre-existing Diseases (PED)",
+                            duration_months=months,
+                            duration_days=qty if "day" in unit else None,
+                            description=desc,
+                            evidence=[
+                                EvidenceSpan(
+                                    text=desc,
+                                    page_number=page.page_number,
+                                    clause_reference="Pre-existing Disease Clause",
+                                )
+                            ],
+                        )
+                    )
+
+            # Pattern 5: Specific diseases waiting period (e.g. 24 months)
+            m_spec = re.search(r"Specific\s+diseases?(?:\s+waiting(?:\s+period)?)?\s*[:\-]?\s*\n?\s*([0-9]+)\s*(months?|years?|days?)", page.text, re.IGNORECASE)
+            if m_spec:
+                qty = int(m_spec.group(1))
+                unit = m_spec.group(2).lower()
+                desc = m_spec.group(0).strip()
+                if desc not in seen_descriptions:
+                    seen_descriptions.add(desc)
+                    months = qty * 12 if "year" in unit else (qty if "month" in unit else None)
+                    waiting_periods.append(
+                        WaitingPeriodInfo(
+                            condition_or_benefit="Specific Diseases Waiting Period",
+                            duration_months=months,
+                            duration_days=qty if "day" in unit else None,
+                            description=desc,
+                            evidence=[
+                                EvidenceSpan(
+                                    text=desc,
+                                    page_number=page.page_number,
+                                    clause_reference="Specific Diseases Waiting Period",
+                                )
+                            ],
+                        )
+                    )
+
         return waiting_periods, "deterministic"
 
     def _extract_benefits_and_clauses(

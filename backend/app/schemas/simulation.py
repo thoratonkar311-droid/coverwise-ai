@@ -17,6 +17,45 @@ class SimulationRequest(BaseModel):
     copay: Optional[float] = Field(None, ge=0.0, description="Fixed co-payment amount override")
     copay_percentage: Optional[float] = Field(None, ge=0.0, le=100.0, description="Co-payment percentage override")
     coverage_limit: Optional[float] = Field(None, ge=0.0, description="Coverage limit or sum insured override")
+    is_network_hospital: Optional[bool] = Field(True, description="Whether hospital is in-network")
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_aliases(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if data.get("is_network_hospital") is None:
+                for k in ("isNetworkHospital", "network", "is_network"):
+                    if data.get(k) is not None:
+                        data["is_network_hospital"] = data[k]
+                        break
+            if data.get("hospital_quote") is None:
+                for k in ("hospitalQuote", "quote", "billed_amount", "cost"):
+                    if data.get(k) is not None:
+                        data["hospital_quote"] = data[k]
+                        break
+            if data.get("copay_percentage") is None:
+                for k in ("copayPercent", "copay_pct", "copay_percent"):
+                    if data.get(k) is not None:
+                        data["copay_percentage"] = data[k]
+                        break
+            if data.get("coverage_limit") is None and data.get("coverageLimit") is not None:
+                data["coverage_limit"] = data["coverageLimit"]
+            if data.get("non_payable_items") is None:
+                for k in ("consumablesEstimate", "consumables", "nonPayableItems"):
+                    if data.get(k) is not None:
+                        data["non_payable_items"] = data[k]
+                        break
+            if not data.get("room_category"):
+                for k in ("roomCategory", "room_tier", "room"):
+                    if data.get(k):
+                        data["room_category"] = data[k]
+                        break
+            if data.get("policy_id") is None and data.get("policyId") is not None:
+                try:
+                    data["policy_id"] = int(data["policyId"])
+                except (ValueError, TypeError):
+                    pass
+        return data
 
     @model_validator(mode="after")
     def sync_treatment_name(self) -> "SimulationRequest":

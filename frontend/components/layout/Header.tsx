@@ -1,16 +1,21 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
+import { useAuth } from "@/lib/auth-context";
 import {
   ShieldCheck,
   Menu,
   X,
   User,
   ArrowRight,
+  LogOut,
+  ChevronDown,
+  LayoutDashboard,
+  FileUp,
 } from "lucide-react";
 
 export interface HeaderProps {
@@ -19,8 +24,11 @@ export interface HeaderProps {
 
 export function Header({ className }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const { user, isAuthenticated, logout, openAuthModal } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -28,6 +36,17 @@ export function Header({ className }: HeaderProps) {
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Close user menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Close mobile menu on resize to desktop
@@ -43,11 +62,10 @@ export function Header({ className }: HeaderProps) {
 
   const navLinks = [
     { label: "Product", href: "/" },
-    { label: "How It Works", href: "/#how-it-works" },
+    { label: "Policy Assistant", href: "/assistant" },
     { label: "Coverage Intelligence", href: "/coverage" },
     { label: "Treatment Costs", href: "/simulator" },
     { label: "Dashboard", href: "/dashboard" },
-    { label: "About", href: "/#about" },
   ];
 
   return (
@@ -76,9 +94,6 @@ export function Header({ className }: HeaderProps) {
               <div className="flex items-center gap-1.5">
                 <span className="text-lg sm:text-xl font-bold tracking-tight text-[#0A1D2E]">
                   CoverWise<span className="text-[#1769FF]">.ai</span>
-                </span>
-                <span className="hidden sm:inline-flex text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#EEF4FF] text-[#0052D1] border border-blue-200/50">
-                  Demo
                 </span>
               </div>
               <span className="text-[11px] sm:text-xs text-slate-500 font-medium tracking-tight">
@@ -113,13 +128,73 @@ export function Header({ className }: HeaderProps) {
 
           {/* Right side actions */}
           <div className="hidden sm:flex items-center gap-2.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-slate-700 hover:text-[#0052D1]"
-            >
-              Sign In
-            </Button>
+            {isAuthenticated && user ? (
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-[#EEF4FF] hover:border-blue-200 text-slate-700 transition-colors cursor-pointer text-xs font-semibold"
+                  aria-expanded={userMenuOpen}
+                  aria-haspopup="true"
+                >
+                  <div className="w-6 h-6 rounded-full bg-[#0052D1] text-white flex items-center justify-center text-[11px] font-bold">
+                    {user.email.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="max-w-[120px] truncate">{user.fullName || user.email}</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="px-3.5 py-2 border-b border-slate-100">
+                      <p className="text-[11px] font-medium text-slate-400">Signed in as</p>
+                      <p className="text-xs font-semibold text-slate-900 truncate">{user.email}</p>
+                    </div>
+
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-3.5 py-2 text-xs text-slate-700 hover:bg-[#EEF4FF] hover:text-[#0052D1] transition-colors"
+                    >
+                      <LayoutDashboard className="w-3.5 h-3.5" />
+                      Intelligence Dashboard
+                    </Link>
+
+                    <Link
+                      href="/analyze"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-3.5 py-2 text-xs text-slate-700 hover:bg-[#EEF4FF] hover:text-[#0052D1] transition-colors"
+                    >
+                      <FileUp className="w-3.5 h-3.5" />
+                      Upload New Policy
+                    </Link>
+
+                    <div className="my-1 border-t border-slate-100" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        logout();
+                      }}
+                      className="flex w-full items-center gap-2 px-3.5 py-2 text-xs text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer font-medium"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-slate-700 hover:text-[#0052D1]"
+                onClick={() => openAuthModal("login")}
+              >
+                Sign In
+              </Button>
+            )}
 
             <Link href="/analyze">
               <Button
@@ -132,20 +207,30 @@ export function Header({ className }: HeaderProps) {
               </Button>
             </Link>
 
-            <button
-              type="button"
-              className="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 hover:bg-[#EEF4FF] hover:border-blue-200 text-slate-600 hover:text-[#0052D1] flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1769FF]"
-              aria-label="User Profile"
-              title="User Account"
-            >
-              <User className="w-4 h-4" />
-            </button>
+            {!isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => openAuthModal("login")}
+                className="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 hover:bg-[#EEF4FF] hover:border-blue-200 text-slate-600 hover:text-[#0052D1] flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1769FF]"
+                aria-label="User Account"
+                title="Sign In"
+              >
+                <User className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
           <div className="flex items-center gap-2 lg:hidden">
             <button
               type="button"
+              onClick={() => {
+                if (isAuthenticated) {
+                  setUserMenuOpen(!userMenuOpen);
+                } else {
+                  openAuthModal("login");
+                }
+              }}
               className="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 flex items-center justify-center transition-colors cursor-pointer sm:hidden"
               aria-label="User Profile"
             >
@@ -186,14 +271,39 @@ export function Header({ className }: HeaderProps) {
           </nav>
 
           <div className="pt-3 border-t border-slate-100 flex flex-col gap-2.5">
-            <Button
-              variant="outline"
-              size="md"
-              className="w-full justify-center text-slate-800 border-slate-300"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Sign In
-            </Button>
+            {isAuthenticated && user ? (
+              <div className="space-y-2">
+                <div className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200/80">
+                  <p className="text-[11px] text-slate-400 font-medium">Logged in as</p>
+                  <p className="text-xs font-bold text-slate-800 truncate">{user.email}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="md"
+                  className="w-full justify-center text-rose-600 border-rose-200 hover:bg-rose-50"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="md"
+                className="w-full justify-center text-slate-800 border-slate-300"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openAuthModal("login");
+                }}
+              >
+                Sign In / Register
+              </Button>
+            )}
+
             <Link
               href="/analyze"
               onClick={() => setMobileMenuOpen(false)}
@@ -214,3 +324,4 @@ export function Header({ className }: HeaderProps) {
     </header>
   );
 }
+

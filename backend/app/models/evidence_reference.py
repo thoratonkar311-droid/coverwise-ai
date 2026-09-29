@@ -29,6 +29,8 @@ class EvidenceReference(Base):
         index=True,
     )
     document_source = Column(String(255), nullable=False)
+    user_id = Column(String(100), nullable=True, index=True)
+    source_type = Column(String(50), nullable=False, default="contractual_rule", index=True)
     page = Column(Integer, nullable=True)
     clause_section = Column(String(255), nullable=True)
     extracted_text = Column(Text, nullable=True)

@@ -3,10 +3,23 @@ from fastapi.testclient import TestClient
 
 def test_coverage_rules_listing_and_filtering(client: TestClient) -> None:
     """Verify listing coverage rules and filtering by policy_id."""
-    # 1. Create a policy
+    # 1. Create a policy with contractual rules
     policy_res = client.post(
         "/api/policies",
-        json={"filename": "coverage_test_policy.pdf", "insurer_name": "Star Health"},
+        json={
+            "filename": "coverage_test_policy.pdf",
+            "insurer_name": "Star Health",
+            "raw_metadata": {
+                "limits": [
+                    {
+                        "service_or_category": "Total Knee Replacement",
+                        "limit_value": 600000.0,
+                        "copay_percentage": 0.0,
+                        "coverage_status": "covered",
+                    }
+                ]
+            },
+        },
     )
     policy_id = policy_res.json()["id"]
 
@@ -22,8 +35,9 @@ def test_coverage_rules_listing_and_filtering(client: TestClient) -> None:
     rules = res.json()
     assert len(rules) >= 1
     assert rules[0]["policy_id"] == policy_id
-    assert rules[0]["coverage_status"] == "partially_covered"
-    assert rules[0]["copay_percentage"] == 10.0
+    assert rules[0]["coverage_status"] == "covered"
+    assert rules[0]["deductible"] is None
+    assert rules[0]["copay_percentage"] == 0.0
 
     rule_id = rules[0]["id"]
 

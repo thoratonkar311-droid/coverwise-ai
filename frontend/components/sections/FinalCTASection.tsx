@@ -43,15 +43,17 @@ export function FinalCTASection() {
 
         {/* CTA Buttons */}
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Button
-            variant="primary"
-            size="lg"
-            leftIcon={<FileUp className="w-4 h-4" />}
-            rightIcon={<ArrowRight className="w-4 h-4" />}
-            className="w-full sm:w-auto shadow-lg shadow-blue-500/30 font-semibold"
-          >
-            Analyze My Policy
-          </Button>
+          <Link href="/analyze" className="w-full sm:w-auto">
+            <Button
+              variant="primary"
+              size="lg"
+              leftIcon={<FileUp className="w-4 h-4" />}
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+              className="w-full sm:w-auto shadow-lg shadow-blue-500/30 font-semibold"
+            >
+              Analyze My Policy
+            </Button>
+          </Link>
 
           <Link href="#coverage-intelligence" className="w-full sm:w-auto">
             <Button

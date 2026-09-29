@@ -30,3 +30,11 @@ class DashboardResponse(BaseModel):
     recent_simulations: List[SimulationResponse] = Field(default_factory=list)
     system_status: str = Field(default="operational", description="Backend service health state")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+    # Scoped user analytics fields
+    policies_analyzed_count: Optional[int] = Field(None, description="Count of policies for authenticated user")
+    coverage_analyses_count: Optional[int] = Field(None, description="Count of analyses for authenticated user")
+    total_estimated_patient_costs: Optional[float] = Field(None, description="Total patient out-of-pocket costs")
+    active_policy: Optional[PolicySummaryResponse] = Field(None, description="Most recent policy for authenticated user")
+    cost_comparison_chart: List[Dict[str, Any]] = Field(default_factory=list, description="Aggregated cost chart data")
+    is_authenticated: bool = Field(default=False, description="Whether data is scoped to an authenticated user")

@@ -3,13 +3,41 @@ from fastapi.testclient import TestClient
 
 def test_analyze_coverage_scenarios(client: TestClient) -> None:
     """Verify coverage analysis for various medical procedure scenarios."""
-    # 1. Register a test policy
+    # 1. Register a test policy with explicit contractual rules
     policy_res = client.post(
         "/api/policies",
         json={
             "filename": "star_comprehensive_plan.pdf",
             "insurer_name": "Star Health",
             "plan_name": "Star Comprehensive",
+            "raw_metadata": {
+                "limits": [
+                    {
+                        "service_or_category": "Cataract Surgery",
+                        "limit_value": 40000.0,
+                        "clause_section": "Section 4.B - Specified Procedure Sub-limits",
+                        "details": "Cataract surgeries are subject to a maximum claim limit of Rs. 40,000 per eye.",
+                    },
+                    {
+                        "service_or_category": "Total Knee Replacement",
+                        "limit_value": 600000.0,
+                        "percentage_of_si": 60.0,
+                        "clause_section": "Section 3.2 - Specified Procedure Sub-limits",
+                        "details": "Total Knee Replacement covered up to 60% of sum insured, maximum Rs. 600,000.",
+                        "copay_percentage": 0.0,
+                        "waiting_period": "36 months waiting period for degenerative conditions",
+                    },
+                ],
+                "exclusions": [
+                    "Cosmetic Rhinoplasty and aesthetic surgeries",
+                ],
+                "waiting_periods": [
+                    {
+                        "condition_or_benefit": "Total Knee Replacement",
+                        "description": "36 months waiting period for degenerative conditions",
+                    }
+                ],
+            },
         },
     )
     policy_id = policy_res.json()["id"]
@@ -26,15 +54,16 @@ def test_analyze_coverage_scenarios(client: TestClient) -> None:
     assert len(cataract_data["evidence_references"]) >= 1
     assert "Section 4.B" in cataract_data["evidence_references"][0]["clause_section"]
 
-    # Scenario B: Knee replacement (co-pay and waiting period)
+    # Scenario B: Knee replacement (contractual rules and waiting period)
     knee_res = client.post(
         "/api/analyses",
         json={"policy_id": policy_id, "treatment_name": "Total Knee Replacement"},
     )
     assert knee_res.status_code == 201
     knee_data = knee_res.json()
-    assert knee_data["coverage_status"] == "partially_covered"
-    assert knee_data["copay_percentage"] == 10.0
+    assert knee_data["coverage_status"] == "covered"
+    assert knee_data["copay_percentage"] == 0.0
+    assert knee_data["coverage_limit"] == 600000.0
     assert knee_data["waiting_periods"] is not None
 
     # Scenario C: Cosmetic surgery (not covered)
@@ -63,7 +92,19 @@ def test_analyze_route_alias_and_treatment_field_alias(client: TestClient) -> No
     """Verify frontend alias route /api/analyze and payload field 'treatment'."""
     policy_res = client.post(
         "/api/policies",
-        json={"filename": "care_heart_policy.pdf", "insurer_name": "Care Health"},
+        json={
+            "filename": "care_heart_policy.pdf",
+            "insurer_name": "Care Health",
+            "raw_metadata": {
+                "benefits": [
+                    {
+                        "service_name": "Angioplasty and Cardiac Stent",
+                        "status": "likely_covered",
+                        "clause_section": "Section 3.1 - Inpatient Hospitalization Care",
+                    }
+                ]
+            },
+        },
     )
     policy_id = policy_res.json()["id"]
 
@@ -82,7 +123,18 @@ def test_analyze_idempotency_and_force_refresh(client: TestClient) -> None:
     """Verify identical requests return cached analysis unless force_refresh is specified."""
     policy_res = client.post(
         "/api/policies",
-        json={"filename": "religare_idempotent.pdf", "insurer_name": "Care Health"},
+        json={
+            "filename": "religare_idempotent.pdf",
+            "insurer_name": "Care Health",
+            "raw_metadata": {
+                "limits": [
+                    {
+                        "service_or_category": "Cataract Surgery",
+                        "limit_value": 40000.0,
+                    }
+                ]
+            },
+        },
     )
     policy_id = policy_res.json()["id"]
 

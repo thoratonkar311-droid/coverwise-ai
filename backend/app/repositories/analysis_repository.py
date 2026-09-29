@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 from sqlalchemy.orm import Session
 
-from app.models import PolicyAnalysis
+from app.models import Policy, PolicyAnalysis
 
 
 class AnalysisRepository:
@@ -36,12 +36,14 @@ class AnalysisRepository:
         treatment_name: str,
         status: str = "completed",
         treatment_id: Optional[int] = None,
+        user_id: Optional[str] = None,
         result_summary: Optional[str] = None,
         result_data: Optional[Any] = None,
     ) -> PolicyAnalysis:
         """Create and persist a new policy analysis record."""
         analysis = PolicyAnalysis(
             policy_id=policy_id,
+            user_id=user_id,
             treatment_id=treatment_id,
             treatment_name=treatment_name,
             status=status,
@@ -59,5 +61,17 @@ class AnalysisRepository:
             self.db.query(PolicyAnalysis)
             .filter(PolicyAnalysis.policy_id == policy_id)
             .order_by(PolicyAnalysis.created_at.desc())
+            .all()
+        )
+
+    def list_recent(self, limit: int = 10, user_id: Optional[str] = None) -> List[PolicyAnalysis]:
+        """Fetch the most recent analyses, optionally filtered by user_id through policy."""
+        query = self.db.query(PolicyAnalysis)
+        if user_id is not None:
+            query = query.join(Policy, PolicyAnalysis.policy_id == Policy.id).filter(Policy.user_id == user_id)
+        return (
+            query
+            .order_by(PolicyAnalysis.created_at.desc())
+            .limit(limit)
             .all()
         )

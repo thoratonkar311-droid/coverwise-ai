@@ -184,6 +184,7 @@ export interface AnalysisResult {
   estimatedInsuranceShare: number | null;
   estimatedPatientShare: number | null;
   deductibleApplicable: number | null;
+  deductibleStatus?: string;
   copayAmount: number | null;
   sublimitApplied?: number | null;
   nonPayableConsumables: number | null;
@@ -192,6 +193,8 @@ export interface AnalysisResult {
   exclusionsList: string[];
   evidenceList: EvidenceReference[];
   evaluatedAt: string;
+  isConditionalOnDeductible?: boolean;
+  policyCoverageCap?: number | null;
 }
 
 // Backwards compatibility alias
@@ -239,6 +242,7 @@ export type SimulatorResult = SimulationResult;
  */
 export interface RecentAnalysisRecord {
   id: string;
+  policyId?: string;
   policy: string;
   treatment: string;
   hospital: string;
@@ -264,3 +268,114 @@ export interface DashboardOverview {
     patient: number;
   }[];
 }
+
+// ==========================================
+// CONVERSATIONAL ASSISTANT & ESTIMATES
+// ==========================================
+
+export interface ConversationEvidence {
+  id?: number;
+  documentSource: string;
+  page?: number;
+  clauseSection?: string;
+  extractedText?: string;
+  interpretation?: string;
+  confidence?: number;
+}
+
+export interface ConversationMessage {
+  id: number;
+  conversationId: number;
+  role: "user" | "assistant" | "system";
+  content: string;
+  confidence?: "High" | "Medium" | "Low" | "Insufficient evidence" | string;
+  isGrounded: boolean;
+  uncertaintyReason?: string;
+  missingInformation?: string[];
+  treatmentScenario?: Record<string, unknown>;
+  costEstimate?: TreatmentEstimateData;
+  evidenceReferences: ConversationEvidence[];
+  createdAt: string;
+}
+
+export interface ConversationSession {
+  id: number;
+  policyId: number;
+  title?: string;
+  contextMetadata?: Record<string, unknown>;
+  messages: ConversationMessage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DrivingFactor {
+  factorName: string;
+  impactAmount?: number;
+  description: string;
+  citation?: string;
+}
+
+export interface TreatmentEstimateData {
+  treatmentName: string;
+  benchmarkTreatmentId?: string;
+  currency: string;
+  isBenchmarkMatched: boolean;
+  benchmarkTypicalCost?: number;
+  benchmarkCostRange?: { min: number; max: number };
+  estimatedTotalCost: number;
+  potentiallyEligibleAmount: number;
+  estimatedInsurerContribution: number;
+  estimatedPatientResponsibility: number;
+  deductibleApplied: number;
+  deductibleStatus?: string;
+  deductibleAmount?: number | null;
+  copayApplied: number;
+  applicableCopayPercentage?: number | null;
+  excessOverLimit: number;
+  nonPayableExcluded: number;
+  roomRentPenalty: number;
+  calculationTrace?: string[];
+  confidenceLevel: string;
+  coverageStatus: string;
+  drivingFactors: DrivingFactor[];
+  missingInformation: string[];
+  uncertaintyNotes: string[];
+  assumptions: string[];
+  disclaimer: string;
+  isConditionalOnDeductible?: boolean;
+  policyCoveragePercentage?: number | null;
+  policyCoverageCap?: number | null;
+  rawCalculation?: Record<string, unknown>;
+}
+
+export interface WhatIfComparisonData {
+  previousScenario: Record<string, unknown>;
+  updatedScenario: Record<string, unknown>;
+  previousEstimate: TreatmentEstimateData;
+  updatedEstimate: TreatmentEstimateData;
+  changesDetected: string[];
+  totalCostDelta: number;
+  insurerContributionDelta: number;
+  patientResponsibilityDelta: number;
+  explanationOfChanges: string[];
+}
+
+// ==========================================
+// AUTHENTICATION & USER PROFILE
+// ==========================================
+
+export interface User {
+  id: number;
+  email: string;
+  fullName?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  tokenType: string;
+  user: User;
+}
+

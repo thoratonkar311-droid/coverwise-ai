@@ -22,30 +22,53 @@ def test_ai_contract_extraction_service() -> None:
     service = MockPolicyAnalysisService()
 
     # Star Health extraction
-    star_input = DocumentExtractionInput(filename="star_health_policy.pdf")
+    star_input = DocumentExtractionInput(
+        filename="star_health_policy.pdf",
+        raw_text=(
+            "Insurer: Star Health & Allied Insurance Company Limited\n"
+            "Plan Name: Star Comprehensive Health Insurance Plan\n"
+            "Policy Number: STAR-POLICY-101\n"
+            "Sum Insured: 1,000,000\n"
+            "Policy Period: 01-Apr-2024 to 31-Mar-2025"
+        ),
+    )
     star_info = service.extract_policy_information(star_input)
     assert "Star Health" in star_info.insurer_name
     assert star_info.sum_insured == 1000000.0
-    assert star_info.confidence == 0.95
+    assert star_info.confidence > 0.0
 
     # Bajaj extraction
-    bajaj_input = DocumentExtractionInput(filename="bajaj_allianz_doc.pdf")
+    bajaj_input = DocumentExtractionInput(
+        filename="bajaj_allianz_doc.pdf",
+        raw_text=(
+            "Insurer: Bajaj Allianz General Insurance Company Limited\n"
+            "Plan Name: Health Guard Gold Plan\n"
+            "Policy Number: BAJAJ-POLICY-202"
+        ),
+    )
     bajaj_info = service.extract_policy_information(bajaj_input)
     assert "Bajaj Allianz" in bajaj_info.insurer_name
-    assert bajaj_info.sum_insured == 750000.0
+    assert bajaj_info.sum_insured is None
 
     # Care extraction
-    care_input = DocumentExtractionInput(filename="care_advantage.pdf")
+    care_input = DocumentExtractionInput(
+        filename="care_advantage.pdf",
+        raw_text=(
+            "Insurer: Care Health Insurance Limited\n"
+            "Plan Name: Care Advantage Elite\n"
+            "Policy Number: CARE-POLICY-303"
+        ),
+    )
     care_info = service.extract_policy_information(care_input)
     assert "Care Health" in care_info.insurer_name
-    assert care_info.sum_insured == 500000.0
+    assert care_info.sum_insured is None
 
-    # Fallback default extraction
+    # Fallback default extraction: unestablished document returns nulls rather than inventing values
     default_input = DocumentExtractionInput(filename="generic_scan.pdf")
     default_info = service.extract_policy_information(default_input)
-    assert default_info.insurer_name is not None
-    assert default_info.sum_insured == 500000.0
-    assert default_info.confidence > 0.0
+    assert default_info.insurer_name is None
+    assert default_info.sum_insured is None
+    assert default_info.confidence == 0.0
 
 
 def test_ai_contract_evidence_retrieval() -> None:

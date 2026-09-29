@@ -27,10 +27,12 @@ class SimulationRepository:
         copay: Optional[float] = None,
         coverage_limit: Optional[float] = None,
         calculation_breakdown: Optional[Any] = None,
+        user_id: Optional[str] = None,
     ) -> Simulation:
         """Persist a new simulation record."""
         sim = Simulation(
             policy_id=policy_id,
+            user_id=user_id,
             treatment_id=treatment_id,
             treatment_name=treatment_name,
             hospital_quote=hospital_quote,

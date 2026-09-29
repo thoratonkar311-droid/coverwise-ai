@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -13,11 +13,12 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { api, parseApiError } from "@/lib/api";
-import { DEMO_DASHBOARD_OVERVIEW } from "@/lib/mock-data";
+import { useAuth } from "@/lib/auth-context";
 import {
   DashboardOverview,
   CoverageStatus,
   RecentAnalysisRecord,
+  PolicySummary,
   ApiError,
 } from "@/types";
 import {
@@ -49,25 +50,85 @@ import {
 type DashboardState = "success" | "loading" | "empty" | "error" | "not_determined";
 
 export default function DashboardPage() {
-  const [state, setState] = useState<DashboardState>("success");
+  const { user, isAuthenticated, isLoading: authLoading, openAuthModal } = useAuth();
+  const [state, setState] = useState<DashboardState>("loading");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [dashboardData, setDashboardData] = useState<DashboardOverview | null>(DEMO_DASHBOARD_OVERVIEW);
+  const [dashboardData, setDashboardData] = useState<DashboardOverview | null>(null);
+  const [userPolicies, setUserPolicies] = useState<PolicySummary[]>([]);
   const [apiError, setApiError] = useState<ApiError | null>(null);
 
-  const loadDashboard = useCallback(async () => {
+  const loadDashboard = useCallback(async (targetPolicyId?: string | number) => {
     setState("loading");
     setApiError(null);
 
     try {
-      const data = await api.getDashboardOverview();
+      const [data, policies] = await Promise.all([
+        api.getDashboardOverview(targetPolicyId),
+        api.getPolicies().catch(() => []),
+      ]);
       setDashboardData(data);
-      setState("success");
+      setUserPolicies(policies);
+      if (
+        data.policiesAnalyzedCount === 0 &&
+        (!data.recentAnalyses || data.recentAnalyses.length === 0) &&
+        !data.activePolicy
+      ) {
+        setState("empty");
+      } else {
+        setState("success");
+      }
     } catch (err) {
       setApiError(parseApiError(err));
       setState("error");
     }
   }, []);
+
+  const handleSwitchActivePolicy = async (policyId: string | number) => {
+    try {
+      await api.activatePolicy(policyId);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("coverwise_active_policy_id", String(policyId));
+      }
+      await loadDashboard(policyId);
+    } catch (err) {
+      setApiError(parseApiError(err));
+    }
+  };
+
+  // Fetch real persisted dashboard data upon mount or auth changes
+  useEffect(() => {
+    let isMounted = true;
+    if (!authLoading) {
+      (async () => {
+        try {
+          const [data, policies] = await Promise.all([
+            api.getDashboardOverview(),
+            api.getPolicies().catch(() => []),
+          ]);
+          if (!isMounted) return;
+          setDashboardData(data);
+          setUserPolicies(policies);
+          if (
+            data.policiesAnalyzedCount === 0 &&
+            (!data.recentAnalyses || data.recentAnalyses.length === 0) &&
+            !data.activePolicy
+          ) {
+            setState("empty");
+          } else {
+            setState("success");
+          }
+        } catch (err) {
+          if (!isMounted) return;
+          setApiError(parseApiError(err));
+          setState("error");
+        }
+      })();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [authLoading, isAuthenticated]);
 
   const activeRecords: RecentAnalysisRecord[] =
     state === "not_determined"
@@ -189,6 +250,37 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* User Status Banner */}
+          {isAuthenticated && user ? (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="text-xs text-slate-700">
+                  Authenticated session: <strong className="text-slate-900 font-semibold">{user.email}</strong>. Showing your private persisted policies and analyses.
+                </span>
+              </div>
+              <Link href="/analyze" className="text-xs font-semibold text-[#0052D1] hover:underline shrink-0">
+                + Upload New Policy
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/80 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+                <span className="text-xs text-amber-900">
+                  Guest view. Sign in to save and access your own private insurance policies and calculations.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => openAuthModal("login")}
+                className="text-xs font-bold text-[#0052D1] hover:underline shrink-0 cursor-pointer text-left sm:text-right"
+              >
+                Sign In / Create Account →
+              </button>
+            </div>
+          )}
+
           {/* STATE: Loading */}
           {state === "loading" && (
             <div className="space-y-6">
@@ -211,8 +303,12 @@ export default function DashboardPage() {
             <Card className="p-8 sm:p-14 bg-white border-slate-200 text-center">
               <EmptyState
                 icon={<FileText className="w-8 h-8 text-slate-400" />}
-                title="No Policies Analyzed Yet"
-                description="Upload an insurance policy document or run a demo scenario to see your personalized coverage intelligence, cost charts, and patient liability history."
+                title={isAuthenticated ? "No Policies Uploaded Yet" : "No Policies Analyzed Yet"}
+                description={
+                  isAuthenticated
+                    ? "Your account currently has no uploaded insurance policies. Upload your insurance PDF to generate automated coverage intelligence, deductible calculations, and treatment simulations."
+                    : "Sign in to access your personal dashboard and saved policies, or explore sample coverage scenarios."
+                }
                 action={
                   <div className="flex flex-wrap items-center justify-center gap-3">
                     <Link href="/analyze">
@@ -220,9 +316,11 @@ export default function DashboardPage() {
                         Upload Policy Document
                       </Button>
                     </Link>
-                    <Button variant="outline" size="md" onClick={() => loadDashboard()}>
-                      Load Sample Dashboard
-                    </Button>
+                    {!isAuthenticated && (
+                      <Button variant="outline" size="md" onClick={() => openAuthModal("login")}>
+                        Sign In / Register
+                      </Button>
+                    )}
                   </div>
                 }
               />
@@ -255,40 +353,73 @@ export default function DashboardPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <MetricCard
                   label="Policies Analyzed"
-                  value={state === "not_determined" ? "Not Determined" : `${dashboardData?.policiesAnalyzedCount || 3} Active`}
+                  value={
+                    state === "not_determined"
+                      ? "Not Determined"
+                      : `${dashboardData?.policiesAnalyzedCount ?? 0} Active`
+                  }
                   sourceTier="policy_source"
                   sourceLabel="Document Ingestion"
-                  subtext="Care Health, Star, HDFC ERGO"
+                  subtext={
+                    dashboardData?.activePolicy
+                      ? dashboardData.activePolicy.planName || "Verified Policy"
+                      : "No active policies"
+                  }
                   icon={<FileText className="w-5 h-5 text-[#0052D1]" />}
                 />
 
                 <MetricCard
                   label="Coverage Analyses"
-                  value={state === "not_determined" ? "Not Determined" : `${dashboardData?.coverageAnalysesCount || 14} Done`}
+                  value={
+                    state === "not_determined"
+                      ? "Not Determined"
+                      : `${dashboardData?.coverageAnalysesCount ?? 0} Done`
+                  }
                   sourceTier="deterministic_calc"
                   sourceLabel="Rules Engine"
-                  subtext="Orthopedic, Ophthalmology, Radiology"
+                  subtext={
+                    (dashboardData?.coverageAnalysesCount ?? 0) > 0
+                      ? "Evaluated against rules"
+                      : "Upload and analyze"
+                  }
                   icon={<Activity className="w-5 h-5 text-[#006B5F]" />}
                 />
 
                 <MetricCard
                   label="Estimated Patient Costs"
-                  value={state === "not_determined" ? "Not Determined" : formatCurrency(dashboardData?.totalEstimatedPatientCosts)}
+                  value={
+                    state === "not_determined"
+                      ? "Not Determined"
+                      : formatCurrency(dashboardData?.totalEstimatedPatientCosts ?? 0)
+                  }
                   sourceTier="estimated_result"
                   sourceLabel="Cumulative Est."
-                  subtext="Deductible & copays across care"
+                  subtext="Deductibles & copays across care"
                   icon={<Coins className="w-5 h-5 text-[#D97706]" />}
                 />
 
-                <MetricCard
-                  label="Recent Analysis"
-                  value={state === "not_determined" ? "Not Determined" : "₹38,500"}
-                  sourceTier="estimated_result"
-                  sourceLabel="Knee Replacement"
-                  subtext="Total Knee Arthroplasty (Demo)"
-                  highlight
-                  icon={<Shield className="w-5 h-5 text-[#0052D1]" />}
-                />
+                {(() => {
+                  const latest = dashboardData?.recentAnalyses?.[0];
+                  return (
+                    <MetricCard
+                      label="Latest Analysis"
+                      value={
+                        state === "not_determined"
+                          ? "Not Determined"
+                          : latest
+                          ? (latest.estimatedPatientShare != null
+                              ? formatCurrency(latest.estimatedPatientShare)
+                              : latest.status)
+                          : "None"
+                      }
+                      sourceTier="estimated_result"
+                      sourceLabel={latest?.treatment || "Policy Intelligence"}
+                      subtext={latest ? latest.policy : "No analyses run yet"}
+                      highlight
+                      icon={<Shield className="w-5 h-5 text-[#0052D1]" />}
+                    />
+                  );
+                })()}
               </div>
 
               {/* 2. Middle Row: Cost Chart + Policy Rules Section */}
@@ -369,6 +500,24 @@ export default function DashboardPage() {
                         {displayValueOrNotDetermined(activePolicy?.insurerName)} • No:{" "}
                         {displayValueOrNotDetermined(activePolicy?.policyNumber)}
                       </CardDescription>
+                      {userPolicies.length > 1 && (
+                        <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                          <label className="text-[11px] font-semibold text-slate-500 whitespace-nowrap">
+                            Switch Active Policy:
+                          </label>
+                          <select
+                            value={String(activePolicy?.id || "")}
+                            onChange={(e) => handleSwitchActivePolicy(e.target.value)}
+                            className="text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:ring-1 focus:ring-[#0052D1] focus:outline-none max-w-[200px] truncate cursor-pointer"
+                          >
+                            {userPolicies.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.planName || p.insurerName || `Policy #${p.id}`}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </CardHeader>
 
                     <CardContent className="space-y-3.5 pt-0">
@@ -422,7 +571,15 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <Link href="/coverage" className="block pt-1">
+                      <Link
+                        href={activePolicy?.id ? `/coverage?policyId=${activePolicy.id}` : "/coverage"}
+                        onClick={() => {
+                          if (activePolicy?.id && typeof window !== "undefined") {
+                            localStorage.setItem("coverwise_active_policy_id", String(activePolicy.id));
+                          }
+                        }}
+                        className="block pt-1"
+                      >
                         <Button variant="outline" size="sm" className="w-full justify-center">
                           View Detailed Policy Intelligence
                         </Button>
@@ -513,7 +670,15 @@ export default function DashboardPage() {
                               {displayValueOrNotDetermined(r.date)}
                             </td>
                             <td className="px-6 py-4 text-right whitespace-nowrap">
-                              <Link href="/coverage">
+                              <Link
+                                href={r.policyId || activePolicy?.id ? `/coverage?policyId=${r.policyId || activePolicy?.id}` : "/coverage"}
+                                onClick={() => {
+                                  const pid = r.policyId || activePolicy?.id;
+                                  if (pid && typeof window !== "undefined") {
+                                    localStorage.setItem("coverwise_active_policy_id", String(pid));
+                                  }
+                                }}
+                              >
                                 <Button variant="outline" size="xs">
                                   Details
                                 </Button>

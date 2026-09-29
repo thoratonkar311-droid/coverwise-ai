@@ -12,7 +12,6 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { api, parseApiError } from "@/lib/api";
-import { DEMO_POLICY } from "@/lib/mock-data";
 import { PolicySummary, ApiError } from "@/types";
 import { formatCurrency, displayValueOrNotDetermined } from "@/lib/utils";
 import {
@@ -50,19 +49,6 @@ export default function AnalyzePage() {
     { title: "Preparing Coverage Summary", detail: "Generating auditable evidence citations" },
   ];
 
-  const handleSelectDemo = () => {
-    const demoFile = {
-      name: "Care_Premier_Policy_Schedule_2026.pdf",
-      size: 2450000,
-      type: "application/pdf",
-    };
-    setFileObject(demoFile);
-    setFileName(demoFile.name);
-    setFileSize("2.4 MB");
-    setFileType(demoFile.type);
-    setApiError(null);
-    setState("selected");
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -170,7 +156,7 @@ export default function AnalyzePage() {
     setState("error");
   };
 
-  const activePolicyData = extractedPolicy || DEMO_POLICY;
+  const activePolicyData = extractedPolicy;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FF] text-[#0A1D2E] antialiased">
@@ -246,17 +232,8 @@ export default function AnalyzePage() {
                     >
                       Browse Files
                     </Button>
-
-                    <Button
-                      variant="outline"
-                      size="md"
-                      onClick={handleSelectDemo}
-                      leftIcon={<Sparkles className="w-4 h-4 text-[#1769FF]" />}
-                      className="bg-white hover:bg-[#EEF4FF]"
-                    >
-                      Use Demo Policy
-                    </Button>
                   </div>
+
                 </div>
 
                 {/* Information Callout */}
@@ -422,7 +399,7 @@ export default function AnalyzePage() {
           )}
 
           {/* STATE E: Success (Extracted Policy Summary & Categories) */}
-          {state === "success" && (
+          {state === "success" && activePolicyData && (
             <div className="space-y-6">
               {/* Success Banner */}
               <div className="p-4 rounded-2xl bg-[#ECFDF5] border border-emerald-200 flex items-center justify-between gap-4">
@@ -556,16 +533,39 @@ export default function AnalyzePage() {
                     Upload Another Document
                   </Button>
 
-                  <Link href="/coverage" className="w-full sm:w-auto">
-                    <Button
-                      variant="primary"
-                      size="md"
-                      rightIcon={<ArrowRight className="w-4 h-4" />}
-                      className="w-full sm:w-auto font-semibold shadow-md"
-                    >
-                      Continue to Coverage Intelligence
-                    </Button>
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                    <Link href={`/assistant?policyId=${activePolicyData.id}`} className="w-full sm:w-auto">
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        leftIcon={<Sparkles className="w-4 h-4 text-[#0052D1]" />}
+                        className="w-full sm:w-auto font-semibold border-blue-200 bg-blue-50 text-[#0052D1] hover:bg-blue-100"
+                      >
+                        Ask Policy Assistant
+                      </Button>
+                    </Link>
+
+                    <Link href={`/coverage?policyId=${activePolicyData.id}`} className="w-full sm:w-auto">
+                      <Button
+                        variant="primary"
+                        size="md"
+                        rightIcon={<ArrowRight className="w-4 h-4" />}
+                        className="w-full sm:w-auto font-semibold shadow-md"
+                      >
+                        Coverage Intelligence
+                      </Button>
+                    </Link>
+
+                    <Link href={`/simulator?policyId=${activePolicyData.id}`} className="w-full sm:w-auto">
+                      <Button
+                        variant="outline"
+                        size="md"
+                        className="w-full sm:w-auto font-semibold border-slate-300"
+                      >
+                        Scenario Studio
+                      </Button>
+                    </Link>
+                  </div>
                 </CardFooter>
               </Card>
             </div>
@@ -591,9 +591,6 @@ export default function AnalyzePage() {
               <div className="mt-6 pt-6 border-t border-slate-100 flex flex-wrap justify-center gap-3">
                 <Button variant="outline" size="sm" onClick={resetAll}>
                   Choose Another File
-                </Button>
-                <Button variant="subtle" size="sm" onClick={handleSelectDemo}>
-                  Load Verified Demo Policy
                 </Button>
               </div>
             </Card>

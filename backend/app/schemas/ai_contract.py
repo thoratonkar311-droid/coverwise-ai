@@ -40,8 +40,9 @@ class EvidenceItem(BaseModel):
     page: Optional[int] = Field(None, ge=1, description="Page number of citation")
     clause_section: Optional[str] = Field(None, max_length=255, description="Clause title, section, or paragraph")
     extracted_text: Optional[str] = Field(None, description="Exact quotation verbatim from policy document")
-    interpretation: str = Field(..., description="Plain-language AI interpretation of how clause impacts coverage")
+    interpretation: Optional[str] = Field(None, description="Plain-language AI interpretation of how clause impacts coverage")
     confidence: float = Field(default=0.0, ge=0.0, le=1.0, description="Model extraction confidence score")
+    source_type: str = Field(default="contractual_rule", description="Source classification: contractual_rule, example, estimate, explanation, exclusion, definition")
 
 
 class StructuredPolicyRules(BaseModel):

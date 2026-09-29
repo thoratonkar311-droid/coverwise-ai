@@ -15,6 +15,8 @@ class Settings(BaseSettings):
 
     # Security
     SECRET_KEY: str = "change_this_value"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
     # Database
     DATABASE_URL: str = "postgresql://username:password@localhost:5432/coverwise"

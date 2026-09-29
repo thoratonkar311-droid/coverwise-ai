@@ -1,14 +1,16 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_optional_current_user
 from app.core.logging import get_logger
 from app.db.session import get_db
 from app.models.policy import Policy
 from app.models.policy_analysis import PolicyAnalysis
 from app.models.simulation import Simulation
 from app.models.treatment import Treatment
+from app.models.user import User
 from app.repositories.policy_repository import PolicyRepository
 from app.schemas.dashboard import DashboardResponse, DashboardStats
 from app.schemas.evidence_reference import EvidenceReferenceResponse
@@ -47,7 +49,12 @@ def _format_analysis(analysis: PolicyAnalysis) -> AnalysisDetailResponse:
         status=analysis.status,
         coverage_status=data.get("coverage_status", "not_determined"),
         coverage_information=data.get("coverage_information", "No coverage information available."),
-        deductible=data.get("deductible"),
+        coverage_percentage=data.get("coverage_percentage") or data.get("coverage_limit_percentage_of_si"),
+        coverage_limit_percentage_of_si=data.get("coverage_limit_percentage_of_si") or data.get("coverage_percentage"),
+        policy_coverage_cap=data.get("coverage_limit"),
+        deductible=None if data.get("deductible_status") == "not_determined" else data.get("deductible"),
+        deductible_status=data.get("deductible_status") or ("determined" if data.get("deductible") is not None else "not_determined"),
+        is_conditional_on_deductible=(data.get("deductible_status") == "not_determined"),
         copay=data.get("copay"),
         copay_percentage=data.get("copay_percentage"),
         coverage_limit=data.get("coverage_limit"),
@@ -56,6 +63,9 @@ def _format_analysis(analysis: PolicyAnalysis) -> AnalysisDetailResponse:
         confidence=float(data.get("confidence", 0.0)),
         explanation=data.get("explanation", analysis.result_summary or ""),
         evidence_references=evidence_list,
+        estimated_total_cost=data.get("estimated_total_cost"),
+        estimated_insurer_share=data.get("estimated_insurer_share"),
+        estimated_patient_share=data.get("estimated_patient_share"),
         created_at=analysis.created_at,
         updated_at=analysis.updated_at,
     )
@@ -90,18 +100,128 @@ def _format_simulation(sim: Simulation) -> SimulationResponse:
     response_model=DashboardResponse,
     summary="Get operational metrics and recent activities for dashboard",
 )
-def get_dashboard_data(db: Session = Depends(get_db)) -> DashboardResponse:
+@router.get(
+    "/dashboard/overview",
+    response_model=DashboardResponse,
+    summary="Get operational metrics and recent activities for dashboard (overview alias)",
+    include_in_schema=False,
+)
+def get_dashboard_data(
+    policy_id: Optional[int] = None,
+    current_user: Optional[User] = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+) -> DashboardResponse:
     """
     Retrieve aggregated metrics, high-level intelligence stats, and recent activities.
 
-    Serves Member 1's frontend dashboard route (/dashboard).
+    When authenticated, strictly scopes records to the active policy and user.
     """
+    policy_repo = PolicyRepository(db)
+
+    if current_user:
+        user_id_str = str(current_user.id)
+        user_policies = policy_repo.list(user_id=user_id_str, limit=50)
+
+        # Resolve active policy
+        active_policy = None
+        target_policy_id = policy_id or current_user.active_policy_id
+        if target_policy_id:
+            active_policy = next((p for p in user_policies if p.id == target_policy_id), None)
+            if not active_policy:
+                active_policy = policy_repo.get_by_id(target_policy_id)
+                if active_policy and active_policy.user_id != user_id_str:
+                    active_policy = None
+
+        if active_policy:
+            recent_analyses_raw = (
+                db.query(PolicyAnalysis)
+                .filter(PolicyAnalysis.policy_id == active_policy.id)
+                .order_by(PolicyAnalysis.created_at.desc())
+                .limit(10)
+                .all()
+            )
+            recent_sims_raw = (
+                db.query(Simulation)
+                .filter(Simulation.policy_id == active_policy.id)
+                .order_by(Simulation.created_at.desc())
+                .limit(10)
+                .all()
+            )
+        else:
+            recent_analyses_raw = []
+            recent_sims_raw = []
+
+        total_policies = len(user_policies)
+        total_analyses = len(recent_analyses_raw)
+        total_simulations = len(recent_sims_raw)
+        total_treatments = db.query(func.count(Treatment.id)).scalar() or 0
+
+        # Sum simulated amounts strictly for active policy
+        total_quote_sum = sum(s.hospital_quote for s in recent_sims_raw)
+        total_insurance_sum = sum(s.estimated_insurance_share for s in recent_sims_raw)
+        total_patient_sum = sum(s.estimated_patient_share for s in recent_sims_raw)
+
+        avg_coverage_pct = 0.0
+        if total_quote_sum > 0:
+            avg_coverage_pct = round((total_insurance_sum / total_quote_sum) * 100.0, 2)
+
+        # Build cost comparison chart from real active policy activities
+        cost_comparison_chart = []
+        if recent_sims_raw:
+            for s in recent_sims_raw[:5]:
+                cost_comparison_chart.append({
+                    "name": s.treatment_name or "Medical Procedure",
+                    "total": round(s.hospital_quote, 2),
+                    "insurer": round(s.estimated_insurance_share, 2),
+                    "patient": round(s.estimated_patient_share, 2),
+                })
+        elif recent_analyses_raw:
+            for a in recent_analyses_raw[:5]:
+                data = a.result_data or {}
+                est_total = data.get("estimated_total_cost")
+                insurer_share = data.get("estimated_insurer_share")
+                patient_share = data.get("estimated_patient_share")
+                if est_total is not None and insurer_share is not None and patient_share is not None:
+                    cost_comparison_chart.append({
+                        "name": a.treatment_name or "Medical Procedure",
+                        "total": round(float(est_total), 2),
+                        "insurer": round(float(insurer_share), 2),
+                        "patient": round(float(patient_share), 2),
+                    })
+
+        recent_analyses = [_format_analysis(a) for a in recent_analyses_raw]
+        recent_simulations = [_format_simulation(s) for s in recent_sims_raw]
+
+        stats = DashboardStats(
+            total_policies=total_policies,
+            total_analyses=total_analyses,
+            total_simulations=total_simulations,
+            total_treatments=total_treatments,
+            average_insurance_coverage_pct=avg_coverage_pct,
+            total_claim_amount_simulated=round(total_quote_sum, 2),
+            total_estimated_savings=round(total_insurance_sum, 2),
+        )
+
+        return DashboardResponse(
+            stats=stats,
+            recent_policies=user_policies[:5],
+            recent_analyses=recent_analyses,
+            recent_simulations=recent_simulations,
+            system_status="operational",
+            policies_analyzed_count=total_policies,
+            coverage_analyses_count=total_analyses,
+            total_estimated_patient_costs=round(total_patient_sum, 2),
+            active_policy=active_policy,
+            cost_comparison_chart=cost_comparison_chart,
+            is_authenticated=True,
+        )
+
+    # Unauthenticated / Legacy / Demo fallback
     total_policies = db.query(func.count(Policy.id)).scalar() or 0
     total_analyses = db.query(func.count(PolicyAnalysis.id)).scalar() or 0
     total_simulations = db.query(func.count(Simulation.id)).scalar() or 0
     total_treatments = db.query(func.count(Treatment.id)).scalar() or 0
 
-    # Aggregate simulation numbers
     totals = (
         db.query(
             func.sum(Simulation.hospital_quote).label("total_quotes"),
@@ -116,10 +236,7 @@ def get_dashboard_data(db: Session = Depends(get_db)) -> DashboardResponse:
     if total_quote_sum > 0:
         avg_coverage_pct = round((total_insurance_sum / total_quote_sum) * 100.0, 2)
 
-    # Fetch recent items
-    policy_repo = PolicyRepository(db)
     recent_policies = policy_repo.list(skip=0, limit=5)
-
     recent_analyses_raw = (
         db.query(PolicyAnalysis)
         .order_by(PolicyAnalysis.created_at.desc())
@@ -152,4 +269,10 @@ def get_dashboard_data(db: Session = Depends(get_db)) -> DashboardResponse:
         recent_analyses=recent_analyses,
         recent_simulations=recent_simulations,
         system_status="operational",
+        policies_analyzed_count=total_policies,
+        coverage_analyses_count=total_analyses,
+        total_estimated_patient_costs=0.0,
+        active_policy=recent_policies[0] if recent_policies else None,
+        cost_comparison_chart=[],
+        is_authenticated=False,
     )

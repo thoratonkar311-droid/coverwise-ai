@@ -1,7 +1,14 @@
+import os
+import sys
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# Ensure repository root is on sys.path so 'ai' package can be resolved in containerized/cloud environments
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 from app.api import api_router
 from app.core.config import settings

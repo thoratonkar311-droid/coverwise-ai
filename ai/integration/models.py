@@ -105,6 +105,7 @@ class PolicyQuestionRequest(BaseModel):
     policy_id: str = Field(..., min_length=1, description="Target policy identifier.")
     question: str = Field(..., min_length=2, description="Inquiry regarding coverage, costs, or exclusions.")
     user_id: str | None = Field(default=None, description="Optional user/tenant ID for scoping.")
+    conversation_history: list[dict[str, Any]] | None = Field(default=None, description="Optional previous messages for context.")
 
 
 class PolicyQuestionResponse(BaseModel):
@@ -117,6 +118,7 @@ class PolicyQuestionResponse(BaseModel):
     question: str = Field(..., description="Original user inquiry.")
     answer: str = Field(..., description="Audit-grounded answer or explicit refusal.")
     grounded: bool = Field(..., description="True if answer is backed by retrieved policy clauses.")
+    confidence: str = Field(default="High", description="Structured confidence level (High, Medium, Low, Insufficient evidence).")
     citations: list[Citation] = Field(default_factory=list, description="Exact 1-indexed page citations.")
     retrieved_clauses_count: int = Field(default=0, ge=0, description="Number of clauses evaluated.")
     is_live_model: bool = Field(..., description="True if live Ollama LLM generated the output.")
