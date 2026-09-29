@@ -575,12 +575,19 @@ def _synthesize_grounded_answer(
                     f"Under {item.chunk.section_title or 'Section 1.1'} (Page {item.chunk.page_number}), "
                     f"the individual in-network annual deductible is {m.group(1)}."
                 )
+            m_alt = re.search(r"(?:in-network\s+individual\s+deductible|individual\s+deductible)[^$0-9]*(\$[0-9,]+(?:\.[0-9]{2})?)", item.chunk.text, re.IGNORECASE)
+            if m_alt:
+                return (
+                    f"Under {item.chunk.section_title or 'Section 1.1'} (Page {item.chunk.page_number}), "
+                    f"the individual in-network annual deductible is {m_alt.group(1)}."
+                )
             m_inr = re.search(r"(?:deductible|in-network)[^0-9]*(?:INR|Rs\.?|₹)\s*([0-9,]+)", item.chunk.text, re.IGNORECASE)
             if m_inr:
                 return (
                     f"Under {item.chunk.section_title or 'Section'} (Page {item.chunk.page_number}), "
                     f"annual deductible is INR {m_inr.group(1)}: \"{item.chunk.text.strip()}\""
                 )
+        for item in all_chunks:
             if "deductible" in item.chunk.text.lower():
                 return (
                     f"Under {item.chunk.section_title or 'Section'} (Page {item.chunk.page_number}): "
@@ -597,6 +604,7 @@ def _synthesize_grounded_answer(
                     f"Per {item.chunk.section_title or 'Section'} (Page {item.chunk.page_number}), "
                     f"in-network services require {m.group(1)}."
                 )
+        for item in all_chunks:
             if "coinsurance" in item.chunk.text.lower():
                 return (
                     f"Per {item.chunk.section_title or 'Section'} (Page {item.chunk.page_number}): \"{item.chunk.text.strip()}\""

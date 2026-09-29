@@ -276,7 +276,7 @@ def test_live_qwen3_vs_fallback_benchmark():
     print(f"\n[Fallback Benchmark] Latency: {latency_fb_ms:.2f}ms, Answer: {res_fb['answer'][:60]}...")
 
     # 2. Live Qwen3:4b JSON Generation (Extraction)
-    if client.check_health():
+    if client.check_health() and client.is_model_available():
         prompt = (
             "Extract the deductible amounts from this text into JSON:\n"
             "Policy: Individual in-network deductible is $1500. Out-of-network is $3000.\n"
